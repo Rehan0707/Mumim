@@ -67,9 +67,10 @@ def parse(text: str, lang: Optional[str] = None) -> NLUResult:
         intent = "GREETING" if len(lowered.split()) <= 2 else "UNKNOWN"
         confidence = 0.3
     else:
-        # QUERY and ORDER often co-occur ("size available? yes"); prefer ORDER if a
-        # confirmation word is present alongside product words.
-        if scores["ORDER"] and scores["ORDER"] >= scores["QUERY"]:
+        # QUERY and ORDER often co-occur ("size available? yes"); prefer ORDER when
+        # a confirmation word is present. Only disambiguate between those two — never
+        # override a stronger LAST_ORDER / COMPLAINT / GREETING winner.
+        if intent in ("QUERY", "ORDER") and scores["ORDER"] and scores["ORDER"] >= scores["QUERY"]:
             intent = "ORDER"
         confidence = min(0.95, 0.55 + 0.15 * top)
 

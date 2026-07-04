@@ -36,13 +36,11 @@ async def create_order(body: OrderIn, db: Session = Depends(get_db)):
     if business is None:
         raise HTTPException(404, "business not found")
     customer = crm.upsert_customer(db, business.id, body.customer_no, body.customer_name)
-    try:
-        order = order_svc.place_order(
-            db, business.id, customer.id,
-            [{"product_id": i.product_id, "qty": i.qty} for i in body.items],
-        )
-    except order_svc.OutOfStock as e:
-        raise HTTPException(409, str(e))
+    # OutOfStock / OrderError propagate to the global handlers (→ 409 / 400 envelopes).
+    order = order_svc.place_order(
+        db, business.id, customer.id,
+        [{"product_id": i.product_id, "qty": i.qty} for i in body.items],
+    )
     order.payment_link = payments.generate_payment_link(business, order)
     db.commit()
     db.refresh(order)

@@ -99,9 +99,26 @@ frontend/
 
 ## API surface (matches TRD T3)
 
-`POST /webhook/whatsapp` · `POST /search/semantic` · `GET/POST /products` ·
+`GET /health` · `GET /health/live` · `GET /health/ready` ·
+`POST /webhook/whatsapp` · `POST /nlu/parse` · `POST /media/transcribe` ·
+`POST /media/vision-search` · `POST /search/semantic` · `GET/POST /products` ·
 `GET/POST /orders` · `POST /orders/{id}/pay` · `POST /payments/webhook` ·
 `GET /customers/{wa_no}` · `GET /analytics/summary` · `WS /ws/dashboard`
+
+Interactive docs at **`/docs`** (Swagger UI) and **`/redoc`**.
+
+## Tests
+
+```bash
+cd backend && source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m pytest              # nlu, orders (oversell/txn), pipeline, api
+```
+
+## More docs
+
+- [DevOps & Integrations Guide](docs/DEVOPS.md) — config, Twilio/Razorpay/ngrok, health, logging, deploy
+- [Contributing & Branching](CONTRIBUTING.md)
 
 ---
 
