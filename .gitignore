@@ -4,10 +4,36 @@ __pycache__/
 *.pyc
 backend/munim.db
 backend/.env
+.env
 
 # Node
 frontend/node_modules/
 frontend/dist/
+
+# ML — model weights & large artifacts (never commit; download via scripts)
+ml/weights/*
+!ml/weights/.gitkeep
+*.pt
+*.bin
+*.onnx
+*.gguf
+*.safetensors
+ml/**/checkpoints/
+
+# Data & media assets (keep folders, ignore heavy files)
+data/**/*.mp4
+data/**/*.mov
+data/**/*.wav
+data/**/*.zip
+design/**/*.mp4
+design/**/*.mov
+*.psd
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Test / tooling caches
+.pytest_cache/
 
 # Misc
 .DS_Store

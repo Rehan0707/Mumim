@@ -1,0 +1,3 @@
+# Model weights live here at runtime but are NEVER committed (see .gitignore).
+# Provide a download_weights.sh per model to fetch them. Pre-download before the
+# hackathon (venue wifi risk).
