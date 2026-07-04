@@ -21,7 +21,7 @@ def _serialize(p: Product) -> dict:
     }
 
 
-@router.get("/products")
+
 @router.get("/products")
 def list_products(business_id: str, q: str = None, db: Session = Depends(get_db)):
     # Agar user ne kuch search kiya hai, toh seedha AI Semantic Search chalega
