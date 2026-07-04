@@ -25,6 +25,18 @@ def _bool(name: str, default: bool = False) -> bool:
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _resolve_db_url(url: str) -> str:
+    """Anchor a relative sqlite path to the backend dir so the same DB file is used
+    no matter the working directory (seed, uvicorn, and ml/ scripts all agree)."""
+    prefix = "sqlite:///"
+    if url.startswith(prefix) and not url.startswith("sqlite:////"):
+        rel = url[len(prefix):]
+        backend_dir = Path(__file__).resolve().parent.parent
+        abs_path = (backend_dir / rel).resolve()
+        return f"sqlite:///{abs_path}"
+    return url
+
+
 class Settings:
     # --- app ---
     APP_ENV: str = os.environ.get("APP_ENV", "development")
@@ -32,7 +44,7 @@ class Settings:
     FRONTEND_ORIGIN: str = os.environ.get("FRONTEND_ORIGIN", "http://localhost:5173")
 
     # --- data / ML ---
-    DATABASE_URL: str = os.environ.get("DATABASE_URL", "sqlite:///./munim.db")
+    DATABASE_URL: str = _resolve_db_url(os.environ.get("DATABASE_URL", "sqlite:///./munim.db"))
     EMBEDDING_DIM: int = 384  # matches products.text_embedding VECTOR(384) in the spec
 
     # --- payments (mock | razorpay) ---

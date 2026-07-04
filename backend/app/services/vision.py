@@ -35,6 +35,21 @@ def model_available() -> bool:
         return False
 
 
+def warmup() -> None:
+    """Load FashionCLIP now (used at startup when VISION_PRELOAD=1) so the first
+    real request doesn't pay the ~10s model-load cost mid-demo."""
+    if not model_available():
+        log.info("vision warmup skipped — FashionCLIP not installed")
+        return
+    try:
+        from ml.vision import fashion_clip
+
+        fashion_clip.embed_text("warmup")  # triggers the cached model load
+        log.info("FashionCLIP preloaded (VISION_PRELOAD)")
+    except Exception as exc:
+        log.warning("vision warmup failed: %s", exc)
+
+
 def catalog_has_embeddings(db: Session, business_id: str) -> bool:
     return (
         db.query(Product)

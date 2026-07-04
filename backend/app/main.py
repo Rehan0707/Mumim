@@ -7,6 +7,7 @@ Wires: structured logging → request middleware → CORS → global exception h
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -44,6 +45,9 @@ async def lifespan(app: FastAPI):
         settings.APP_ENV, settings.PAYMENT_MODE, settings.WHATSAPP_MODE,
         settings.DATABASE_URL.split("://")[0],
     )
+    if os.environ.get("VISION_PRELOAD", "").strip().lower() in {"1", "true", "yes"}:
+        from .services import vision
+        vision.warmup()
     yield
     log.info("Munim.ai shutting down")
 
