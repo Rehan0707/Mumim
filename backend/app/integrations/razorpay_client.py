@@ -23,11 +23,18 @@ log = logging.getLogger("munim.razorpay")
 PAYMENT_LINKS_API = "https://api.razorpay.com/v1/payment_links"
 
 
+def _clean_contact(raw: str) -> str:
+    """Razorpay rejects malformed phone numbers; only send a plausible one."""
+    digits = "".join(ch for ch in (raw or "") if ch.isdigit())
+    return digits if 10 <= len(digits) <= 15 else ""
+
+
 def create_payment_link(amount_rupees: float, description: str, reference_id: str,
                         customer_contact: str = "") -> str:
     key, secret = settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET
     if not (key and secret):
         raise RuntimeError("Razorpay not configured: set RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET")
+    contact = _clean_contact(customer_contact)
     body = json.dumps({
         "amount": int(round(amount_rupees * 100)),  # paise
         "currency": "INR",
@@ -35,7 +42,7 @@ def create_payment_link(amount_rupees: float, description: str, reference_id: st
         "description": description,
         "reference_id": reference_id,
         "notes": {"order_id": reference_id},
-        "customer": {"contact": customer_contact} if customer_contact else {},
+        "customer": {"contact": contact} if contact else {},
     }).encode()
     req = urllib.request.Request(PAYMENT_LINKS_API, data=body, method="POST")
     auth = base64.b64encode(f"{key}:{secret}".encode()).decode()
