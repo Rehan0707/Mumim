@@ -75,7 +75,7 @@ def test_media_vision_search(client, business_id):
         "business_id": business_id, "image_url": "http://x/i.jpg?q=blue checked shirt",
     }).json()
     assert r["matches"]
-    assert r["engine"] == "mock-fashionclip"
+    assert r["engine"] in ("fashionclip", "text-hint-fallback")
 
 
 def test_validation_error_envelope(client):

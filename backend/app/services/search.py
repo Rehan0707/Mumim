@@ -55,6 +55,34 @@ def semantic_search(
     return [_to_match(p, score) for score, p in scored[:limit] if score > 0]
 
 
+def image_search(
+    db: Session,
+    business_id: str,
+    query_vec: List[float],
+    limit: int = 3,
+) -> List[dict]:
+    """Cosine search over products.image_embedding (FashionCLIP space, 512-d).
+
+    Used by "Dikhao": embed the customer's screenshot, rank the catalog by image
+    similarity. Products without an image_embedding are skipped. Swap to pgvector
+    by ordering on image_embedding <=> query_vec — scoring stays identical.
+    """
+    if not query_vec:
+        return []
+    products = (
+        db.query(Product)
+        .filter(Product.business_id == business_id, Product.is_active.is_(True))
+        .all()
+    )
+    scored = [
+        (embeddings.cosine(query_vec, p.image_embedding), p)
+        for p in products
+        if p.image_embedding
+    ]
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [_to_match(p, score) for score, p in scored[:limit] if score > 0]
+
+
 def _to_match(p: Product, score: float) -> dict:
     return {
         "product_id": p.id,

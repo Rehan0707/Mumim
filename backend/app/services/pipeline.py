@@ -19,7 +19,7 @@ from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from ..models import Business, Message, Order
-from . import crm, nlu, orders, payments, reply, search
+from . import crm, nlu, orders, payments, reply, search, vision
 
 # (business_id, customer_no) -> {"product_id","qty","name"} awaiting confirmation
 _PENDING: Dict[str, dict] = {}
@@ -156,7 +156,12 @@ def _handle_visual(db, business, customer, media_url, events) -> str:
     events.append({"type": "new_message", "data": {
         "customer_no": customer.whatsapp_no, "direction": "in", "text": "📷 [image]", "intent": "QUERY"}})
 
-    matches = search.semantic_search(db, business.id, query or "shirt", {}, limit=3)
+    # Real FashionCLIP image search when available; else text-hint fallback.
+    matches = None
+    if media_url:
+        matches = vision.search_by_image_url(db, business.id, media_url, limit=3)
+    if matches is None:
+        matches = search.semantic_search(db, business.id, query or "shirt", {}, limit=3)
     if matches:
         key = _key(business.id, customer.whatsapp_no)
         _PENDING[key] = {"product_id": matches[0]["product_id"], "qty": 1, "name": matches[0]["name"]}
