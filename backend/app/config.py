@@ -21,12 +21,35 @@ def _load_env_file() -> None:
 _load_env_file()
 
 
+def _bool(name: str, default: bool = False) -> bool:
+    return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+
+
 class Settings:
-    DATABASE_URL: str = os.environ.get("DATABASE_URL", "sqlite:///./munim.db")
-    PAYMENT_MODE: str = os.environ.get("PAYMENT_MODE", "mock")
-    WHATSAPP_MODE: str = os.environ.get("WHATSAPP_MODE", "mock")
+    # --- app ---
+    APP_ENV: str = os.environ.get("APP_ENV", "development")
+    LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO").upper()
     FRONTEND_ORIGIN: str = os.environ.get("FRONTEND_ORIGIN", "http://localhost:5173")
+
+    # --- data / ML ---
+    DATABASE_URL: str = os.environ.get("DATABASE_URL", "sqlite:///./munim.db")
     EMBEDDING_DIM: int = 384  # matches products.text_embedding VECTOR(384) in the spec
+
+    # --- payments (mock | razorpay) ---
+    PAYMENT_MODE: str = os.environ.get("PAYMENT_MODE", "mock").lower()
+    RAZORPAY_KEY_ID: str = os.environ.get("RAZORPAY_KEY_ID", "")
+    RAZORPAY_KEY_SECRET: str = os.environ.get("RAZORPAY_KEY_SECRET", "")
+    RAZORPAY_WEBHOOK_SECRET: str = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
+
+    # --- messaging (mock | twilio) ---
+    WHATSAPP_MODE: str = os.environ.get("WHATSAPP_MODE", "mock").lower()
+    TWILIO_ACCOUNT_SID: str = os.environ.get("TWILIO_ACCOUNT_SID", "")
+    TWILIO_AUTH_TOKEN: str = os.environ.get("TWILIO_AUTH_TOKEN", "")
+    TWILIO_WHATSAPP_FROM: str = os.environ.get("TWILIO_WHATSAPP_FROM", "")
+
+    @property
+    def is_production(self) -> bool:
+        return self.APP_ENV.lower() in {"production", "prod"}
 
 
 settings = Settings()
