@@ -21,15 +21,18 @@ def _serialize(p: Product) -> dict:
     }
 
 
+
 @router.get("/products")
 def list_products(business_id: str, q: str = None, db: Session = Depends(get_db)):
+    # Agar user ne kuch search kiya hai, toh seedha AI Semantic Search chalega
+    if q:
+        # Hum seedha tumhare teammate ka banaya hua search function call kar rahe hain
+        return search.semantic_search(db, business_id, q, limit=10)
+    
+    # Agar query nahi hai, toh purana logic (poori dukaan ka saaman dikhao)
     query = db.query(Product).filter(Product.business_id == business_id, Product.is_active.is_(True))
     products = query.order_by(Product.name).all()
-    if q:
-        ql = q.lower()
-        products = [p for p in products if ql in f"{p.name} {p.brand or ''}".lower()]
     return [_serialize(p) for p in products]
-
 
 @router.post("/products", status_code=201)
 def create_product(business_id: str, body: ProductIn, db: Session = Depends(get_db)):

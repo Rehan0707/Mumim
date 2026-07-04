@@ -1,45 +1,49 @@
-"""Pluggable embedder.
-
-Pragmatic MVP: a deterministic hashing bag-of-words vectorizer — zero downloads,
-works fully offline, produces a normalized EMBEDDING_DIM vector. Mechanically it
-is real vector search (cosine over dense vectors); only the encoder is simple.
-
-To swap in real semantics later, replace `embed_text` with a sentence-transformers
-call (e.g. paraphrase-multilingual-MiniLM-L12-v2) — nothing else changes.
-"""
-from __future__ import annotations
-
-import hashlib
-import re
-from typing import List
-
+import os
+import torch
 import numpy as np
+from typing import List
+from transformers import AutoTokenizer, AutoModel
 
 from .config import settings
 
-_TOKEN_RE = re.compile(r"[a-z0-9]+")
+# --- Load Offline Models (Global State so it loads only once on startup) ---
+WEIGHTS_DIR = os.path.join(os.path.dirname(__file__), "..", "weights")
+INDIC_DIR = os.path.join(WEIGHTS_DIR, "indic-bert")
 
-
-def _tokenize(text: str) -> List[str]:
-    return _TOKEN_RE.findall((text or "").lower())
-
+print("🤖 Loading offline IndicBERT engine...")
+try:
+    tokenizer_bert = AutoTokenizer.from_pretrained(INDIC_DIR)
+    model_bert = AutoModel.from_pretrained(INDIC_DIR)
+except Exception as e:
+    print(f"⚠️ Error loading IndicBERT. Did you run download_models.py? Error: {e}")
+    tokenizer_bert = None
+    model_bert = None
 
 def embed_text(text: str) -> List[float]:
-    """Hash tokens (+ char bigrams for fuzziness) into a normalized dense vector."""
-    dim = settings.EMBEDDING_DIM
-    vec = np.zeros(dim, dtype=np.float32)
-    tokens = _tokenize(text)
-    grams = tokens + [t[i : i + 3] for t in tokens for i in range(max(1, len(t) - 2))]
-    for tok in grams:
-        h = int(hashlib.md5(tok.encode()).hexdigest(), 16)
-        vec[h % dim] += 1.0
+    """Generate real dense vector using offline IndicBERT (768 dimensions)."""
+    if not text or tokenizer_bert is None or model_bert is None:
+        return np.zeros(settings.EMBEDDING_DIM, dtype=np.float32).tolist()
+
+    # Convert text to tensor and run through the model
+    inputs = tokenizer_bert(text, return_tensors="pt", truncation=True, max_length=512)
+    
+    with torch.no_grad():
+        outputs = model_bert(**inputs)
+        
+    # Mean pooling: Average all token vectors to get one sentence vector
+    # Shape goes from [1, seq_len, 768] -> [768]
+    vec = outputs.last_hidden_state.mean(dim=1).squeeze().numpy()
+
+    # Normalize the vector (required for accurate cosine similarity)
     norm = float(np.linalg.norm(vec))
     if norm > 0:
         vec /= norm
+        
     return vec.tolist()
 
 
 def cosine(a: List[float], b: List[float]) -> float:
+    """Keep teammate's existing cosine logic."""
     if not a or not b:
         return 0.0
     va, vb = np.asarray(a, dtype=np.float32), np.asarray(b, dtype=np.float32)
@@ -50,7 +54,7 @@ def cosine(a: List[float], b: List[float]) -> float:
 
 
 def product_text(name: str, brand: str = None, attributes: dict = None) -> str:
-    """Canonical text used to build a product's text_embedding (spec: name+brand+attributes)."""
+    """Keep teammate's existing product text builder."""
     parts = [name or "", brand or ""]
     if attributes:
         parts.extend(str(v) for v in attributes.values())
