@@ -1,7 +1,9 @@
 """Orders + payments endpoints (spec T3 / A3)."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+import json
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from ..db import get_db
@@ -71,9 +73,26 @@ async def fulfill(order_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/payments/webhook")
-async def payment_webhook(payload: dict, db: Session = Depends(get_db)):
-    """Razorpay/mock payment confirmation. Idempotent mark-paid + CRM update."""
-    order_id = payload.get("order_id") or payload.get("notes", {}).get("order_id")
+async def payment_webhook(request: Request, db: Session = Depends(get_db)):
+    """Razorpay/mock payment confirmation. Verifies signature (razorpay mode),
+    then does an idempotent mark-paid + CRM update. Reads the raw body so the
+    HMAC signature check is over the exact bytes Razorpay signed."""
+    raw = await request.body()
+    signature = request.headers.get("X-Razorpay-Signature", "")
+    if not payments.verify_webhook_signature(raw, signature):
+        raise HTTPException(401, "invalid payment webhook signature")
+    try:
+        payload = json.loads(raw or b"{}")
+    except ValueError:
+        raise HTTPException(400, "invalid JSON body")
+
+    # Accept both the mock shape and Razorpay's nested payment-link payload.
+    order_id = (
+        payload.get("order_id")
+        or payload.get("notes", {}).get("order_id")
+        or payload.get("payload", {}).get("payment_link", {}).get("entity", {})
+        .get("notes", {}).get("order_id")
+    )
     order = db.get(Order, order_id) if order_id else None
     if order is None:
         raise HTTPException(404, "order not found")

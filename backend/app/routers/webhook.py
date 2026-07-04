@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from ..db import get_db
+from ..integrations import whatsapp
 from ..models import Business
 from ..schemas import InboundMessage
 from ..services import pipeline
@@ -43,6 +44,9 @@ async def _run(db: Session, business: Business, msg: InboundMessage) -> dict:
     )
     for event in out["events"]:
         await manager.broadcast(business.id, event)
+    # twilio mode actively sends the reply; mock mode logs it (the simulator reads
+    # the reply from the HTTP response). send_message() branches on WHATSAPP_MODE.
+    whatsapp.send_message(msg.from_no, out["reply"])
     return out
 
 
