@@ -6,3 +6,8 @@ sqlalchemy>=2.0.30
 pydantic>=2.8.0
 python-multipart>=0.0.9
 numpy>=1.26.0
+transformers==4.46.3
+sentence-transformers>=2.2.0
+sentencepiece>=0.1.99
+tiktoken>=0.7.0
+protobuf>=4.25.0

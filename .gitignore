@@ -38,3 +38,7 @@ design/**/*.mov
 # Misc
 .DS_Store
 *.log
+
+# Local Environment and ML Weights
+backend/venv/
+backend/weights/
