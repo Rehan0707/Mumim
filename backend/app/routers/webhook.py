@@ -66,4 +66,5 @@ async def inbound(request: Request, db: Session = Depends(get_db)):
         )
     business = _resolve_business(db, msg.business_id)
     out = await _run(db, business, msg)
-    return {"reply": out["reply"], "intent": out["intent"], "lang": out["lang"]}
+    return {"reply": out["reply"], "intent": out["intent"], "lang": out["lang"],
+            "matches": out.get("matches", [])}

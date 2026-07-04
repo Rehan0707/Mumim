@@ -3,6 +3,17 @@ import type { Analytics, Business, Customer, Order, Product } from "./types";
 // Vite dev proxy maps /api -> backend :8000 and /ws -> backend websocket.
 const API = "/api";
 
+export interface MatchCard {
+  product_id: string;
+  name: string;
+  brand?: string | null;
+  size?: string | null;
+  price: number;
+  stock_qty: number;
+  image_url?: string | null;
+  score: number;
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API}${path}`);
   if (!res.ok) throw new Error(`${res.status} ${path}`);
@@ -34,7 +45,7 @@ export const api = {
   markPaid: (oid: string) => post<Order>(`/payments/webhook`, { order_id: oid, payment_id: "dashboard" }),
   // WhatsApp simulator -> webhook
   sendWhatsapp: (payload: { from_no: string; type: string; text?: string; media_url?: string; name?: string }) =>
-    post<{ reply: string; intent: string; lang: string }>(`/webhook/whatsapp`, payload),
+    post<{ reply: string; intent: string; lang: string; matches?: MatchCard[] }>(`/webhook/whatsapp`, payload),
 };
 
 export function openDashboardSocket(bid: string, onEvent: (e: any) => void): WebSocket {

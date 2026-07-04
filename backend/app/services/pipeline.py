@@ -63,8 +63,9 @@ def handle_message(
     events.append({"type": "new_message", "data": {
         "customer_no": from_no, "direction": "in", "text": text, "intent": result.intent}})
 
-    # Step 4-5: dispatch by intent.
-    reply_text = _dispatch(db, business, customer, result, events)
+    # Step 4-5: dispatch by intent. `cards` collects product matches to show in chat.
+    cards: List[dict] = []
+    reply_text = _dispatch(db, business, customer, result, events, cards)
 
     # Step 6: log outbound.
     _log_message(db, business.id, customer.id, "out", "text", reply_text, result.intent, lang)
@@ -72,10 +73,10 @@ def handle_message(
         "customer_no": from_no, "direction": "out", "text": reply_text}})
 
     return {"reply": reply_text, "intent": result.intent, "lang": lang,
-            "events": events, "customer_id": customer.id}
+            "events": events, "customer_id": customer.id, "matches": cards}
 
 
-def _dispatch(db, business, customer, result, events) -> str:
+def _dispatch(db, business, customer, result, events, cards) -> str:
     intent, lang, entities = result.intent, result.lang, result.entities
     key = _key(business.id, customer.whatsapp_no)
 
@@ -98,13 +99,13 @@ def _dispatch(db, business, customer, result, events) -> str:
         if pending and (is_confirm or not entities.get("keywords")):
             return _place(db, business, customer, pending, lang, events, key)
         # ORDER intent but new product mentioned -> search then ask to confirm.
-        return _query_and_stage(db, business, customer, result, lang, events, key)
+        return _query_and_stage(db, business, customer, result, lang, events, key, cards)
 
     # QUERY (default): search and stage a reserve.
-    return _query_and_stage(db, business, customer, result, lang, events, key)
+    return _query_and_stage(db, business, customer, result, lang, events, key, cards)
 
 
-def _query_and_stage(db, business, customer, result, lang, events, key) -> str:
+def _query_and_stage(db, business, customer, result, lang, events, key, cards) -> str:
     matches = search.semantic_search(db, business.id, result.raw, result.entities, limit=3)
     if not matches:
         _PENDING.pop(key, None)
@@ -115,6 +116,7 @@ def _query_and_stage(db, business, customer, result, lang, events, key) -> str:
         "qty": int(result.entities.get("qty", 1)),
         "name": top["name"],
     }
+    cards.append(top)  # show the matched product (with photo) in chat
     return reply.availability(top, lang)
 
 
@@ -169,5 +171,6 @@ def _handle_visual(db, business, customer, media_url, events) -> str:
     _log_message(db, business.id, customer.id, "out", "text", reply_text, "QUERY", lang)
     events.append({"type": "new_message", "data": {
         "customer_no": customer.whatsapp_no, "direction": "out", "text": reply_text}})
+    # show the closest-match product photos in chat (the "Dikhao" wow)
     return {"reply": reply_text, "intent": "QUERY", "lang": lang,
-            "events": events, "customer_id": customer.id}
+            "events": events, "customer_id": customer.id, "matches": matches[:3]}

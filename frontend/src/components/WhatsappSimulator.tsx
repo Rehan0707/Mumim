@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "../api";
+import { api, type MatchCard } from "../api";
 
 interface ChatMsg {
   dir: "in" | "out";
   text: string;
   kind?: "text" | "voice" | "image";
+  cards?: MatchCard[];
 }
 
 const QUICK = [
@@ -40,7 +41,10 @@ export function WhatsappSimulator() {
     setMessages((m) => [...m, { dir: "in", text: shown, kind: payload.type as any }]);
     try {
       const res = await api.sendWhatsapp({ ...customer, ...payload });
-      setMessages((m) => [...m, { dir: "out", text: res.reply }]);
+      setMessages((m) => [
+        ...m,
+        { dir: "out", text: res.reply, cards: res.matches && res.matches.length ? res.matches : undefined },
+      ]);
     } catch {
       setMessages((m) => [...m, { dir: "out", text: "⚠️ (bot offline — is the backend running?)" }]);
     } finally {
@@ -84,7 +88,7 @@ export function WhatsappSimulator() {
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2"
               style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.2),rgba(0,0,0,0.2))" }}>
               {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.dir === "in" ? "justify-end" : "justify-start"}`}>
+                <div key={i} className={`flex flex-col ${m.dir === "in" ? "items-end" : "items-start"}`}>
                   <div
                     className={`max-w-[80%] px-3 py-2 rounded-lg text-[13px] whitespace-pre-wrap leading-snug ${
                       m.dir === "in" ? "bg-wa-bubble text-white rounded-br-none" : "bg-wa-inbound text-slate-100 rounded-bl-none"
@@ -92,6 +96,32 @@ export function WhatsappSimulator() {
                   >
                     {m.text}
                   </div>
+                  {m.cards && (
+                    <div className="mt-1.5 flex flex-col gap-1.5 max-w-[85%]">
+                      {m.cards.map((c) => (
+                        <div key={c.product_id} className="flex items-center gap-2.5 bg-wa-inbound rounded-lg p-1.5 pr-3 shadow-sm">
+                          {c.image_url && (
+                            <img
+                              src={c.image_url}
+                              alt={c.name}
+                              className="w-12 h-12 rounded-md object-cover shrink-0 bg-black/20"
+                              onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <div className="text-[12px] text-slate-100 font-medium truncate">{c.name}</div>
+                            <div className="text-[12px] text-emerald-400 font-semibold">
+                              ₹{c.price.toLocaleString("en-IN")}
+                              {c.size ? <span className="text-slate-400 font-normal"> · size {c.size}</span> : null}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {c.stock_qty > 0 ? `${c.stock_qty} in stock` : "out of stock"}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               {busy && <div className="text-[11px] text-slate-400 pl-1">Munim is typing…</div>}
