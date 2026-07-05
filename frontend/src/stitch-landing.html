@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Munim.ai | Modern bookkeeping for the living ledger</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&amp;family=Inter:wght@400;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Plus+Jakarta+Sans:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        @keyframes pulse-signal {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pulse-signal {
+            animation: pulse-signal 2s infinite ease-in-out;
+        }
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up {
+            animation: slideUpFade 0.6s ease-out forwards;
+        }
+        .ledger-rule {
+            background-image: linear-gradient(to bottom, transparent 95%, rgba(15, 92, 70, 0.1) 100%);
+            background-size: 100% 32px;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#236a53",
+                    "on-tertiary-fixed": "#171d1b",
+                    "surface-container-highest": "#d9e3f9",
+                    "surface-container": "#e7eeff",
+                    "outline-variant": "#bfc9c2",
+                    "secondary": "#006e2f",
+                    "on-secondary": "#ffffff",
+                    "inverse-surface": "#273141",
+                    "tertiary": "#363b39",
+                    "inverse-on-surface": "#ebf1ff",
+                    "on-tertiary-container": "#c0c5c2",
+                    "surface-bright": "#f9f9ff",
+                    "primary": "#004331",
+                    "surface": "#f9f9ff",
+                    "on-error": "#ffffff",
+                    "primary-fixed-dim": "#8fd5b8",
+                    "outline": "#6f7974",
+                    "on-primary-fixed-variant": "#00513c",
+                    "on-surface-variant": "#3f4944",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed-dim": "#4ae176",
+                    "tertiary-fixed": "#dee4e1",
+                    "surface-container-high": "#dee8ff",
+                    "on-secondary-fixed": "#002109",
+                    "on-primary-container": "#8dd2b6",
+                    "surface-container-low": "#f0f3ff",
+                    "on-primary": "#ffffff",
+                    "inverse-primary": "#8fd5b8",
+                    "error": "#ba1a1a",
+                    "on-secondary-container": "#007432",
+                    "primary-fixed": "#abf1d4",
+                    "tertiary-container": "#4d5250",
+                    "error-container": "#ffdad6",
+                    "on-background": "#121c2c",
+                    "tertiary-fixed-dim": "#c2c8c5",
+                    "primary-container": "#0f5c46",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed": "#002116",
+                    "surface-variant": "#d9e3f9",
+                    "secondary-fixed": "#6bff8f",
+                    "surface-container-lowest": "#ffffff",
+                    "on-surface": "#121c2c",
+                    "background": "#F5FAF7",
+                    "surface-dim": "#d0daf0",
+                    "on-tertiary-fixed-variant": "#424846",
+                    "secondary-container": "#6bff8f",
+                    "on-secondary-fixed-variant": "#005321",
+                    "munim-green": "#0F5C46",
+                    "canvas-mint": "#F5FAF7",
+                    "signal-green": "#4ae176",
+                    "coral": "#ba1a1a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "2xl": "1rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "section-gap": "64px",
+                    "card-padding": "24px",
+                    "touch-target-min": "48px",
+                    "gutter": "16px",
+                    "margin-desktop": "32px",
+                    "base": "8px",
+                    "margin-mobile": "16px"
+            },
+            "fontFamily": {
+                    "display-lg-mobile": ["Plus Jakarta Sans"],
+                    "label-caps": ["Inter"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "numeral-lg": ["IBM Plex Mono"],
+                    "body-sm": ["Inter"],
+                    "numeral-md": ["IBM Plex Mono"],
+                    "body-lg": ["Inter"],
+                    "display-lg": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "display-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "numeral-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "numeral-md": ["18px", {"lineHeight": "24px", "fontWeight": "500"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            },
+            "boxShadow": {
+                "soft-depth": "0px 4px 20px rgba(15, 92, 70, 0.08)",
+                "float-depth": "0px 8px 32px rgba(15, 92, 70, 0.12)"
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-background text-on-surface antialiased selection:bg-primary-container selection:text-white">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full shadow-sm dark:shadow-none bg-surface/90 backdrop-blur-md z-50 transition-all duration-300">
+<div class="flex justify-between items-center h-20 px-margin-mobile md:px-margin-desktop w-full max-w-7xl mx-auto z-50">
+<div class="text-headline-md font-headline-md text-primary dark:text-primary-fixed">Munim.ai</div>
+<nav class="hidden md:flex gap-8 items-center">
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-lg text-body-lg" href="#story">Story</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-lg text-body-lg" href="#app-flow">App Flow</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-lg text-body-lg" href="#how-it-works">How It Works</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-lg text-body-lg" href="#about">About</a>
+</nav>
+<button class="bg-primary-container text-white px-6 py-3 rounded-full font-body-lg text-body-lg hover:opacity-80 transition-opacity min-h-[48px] flex items-center justify-center shadow-float-depth hover:scale-95 duration-150">
+                Go live free
+            </button>
+</div>
+</header>
+<!-- Hero Section -->
+<section class="pt-32 pb-section-gap px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 items-center min-h-screen">
+<div class="lg:w-1/2 flex flex-col gap-6 z-10">
+<h1 class="font-display-lg text-display-lg-mobile md:text-display-lg text-primary animate-slide-up" style="animation-delay: 0.1s;">
+                The AI munim for every shop.
+            </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed animate-slide-up" style="animation-delay: 0.2s;">
+                Munim.ai turns your shop's WhatsApp number into an assistant that sells, tracks stock, and remembers every customer — no app, no new habits, no typing.
+            </p>
+<div class="flex gap-4 mt-4 animate-slide-up" style="animation-delay: 0.3s;">
+<button class="bg-primary-container text-white px-8 py-4 rounded-xl font-headline-md text-body-lg min-h-[48px] shadow-float-depth hover:scale-95 transition-transform duration-150">
+                    Get Started Now
+                </button>
+</div>
+</div>
+<div class="lg:w-1/2 relative w-full h-[600px] animate-slide-up" style="animation-delay: 0.4s;">
+<!-- Decorative bg elements -->
+<div class="absolute inset-0 bg-surface-container-high rounded-3xl opacity-20 blur-3xl"></div>
+<div class="relative w-full h-full flex items-center justify-center">
+<!-- Split Screen Mockup Container -->
+<div class="w-full max-w-lg aspect-square bg-surface rounded-3xl shadow-float-depth flex overflow-hidden border border-outline-variant/30">
+<!-- Left: WhatsApp Chat -->
+<div class="w-1/2 bg-[#ECE5DD] border-r border-outline-variant/30 flex flex-col">
+<div class="bg-[#075E54] text-white p-3 flex items-center gap-3">
+<span class="material-symbols-outlined">arrow_back</span>
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden">
+<img class="object-cover w-full h-full" data-alt="A small circular avatar placeholder for a generic user profile, minimalist and clean style, light modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkJnFuwp5Le8ikSQiHcnyHiGIwafxC1y2xMik8TConScvGfvOljUnZ8yHmHABo2FEB0BUhBjX3GBIH_QQhjsqYeyh10jTfta4YpkPoM3LvmbRC3s87eea7n9qiRW3jr4Ljh3UdonNP115G77M6CZkfVvPwWNsu0PnB982-mt6HxUErzxm39_x5oAjmfOtNr4EL9kme-aIzSSeoShFiYWunUb7cIELZe9ZTYc1Ftf6fGbe2ntvuPHLk"/>
+</div>
+<span class="font-body-sm font-semibold">Customer</span>
+</div>
+<div class="p-4 flex flex-col gap-3 flex-1 ledger-rule">
+<div class="bg-white rounded-lg rounded-tl-none p-3 max-w-[85%] self-start shadow-sm text-sm">
+                                Do you have Nike running shoes size 10?
+                            </div>
+<div class="bg-[#DCF8C6] rounded-lg rounded-tr-none p-3 max-w-[85%] self-end shadow-sm text-sm relative">
+                                Yes! We have 3 pairs in stock. ₹4,500 each.
+                                <span class="absolute -right-1 -top-1 w-2 h-2 bg-signal-green rounded-full animate-pulse-signal"></span>
+</div>
+</div>
+</div>
+<!-- Right: Dashboard Slice -->
+<div class="w-1/2 bg-surface p-6 flex flex-col gap-6 justify-center">
+<div class="flex justify-between items-center">
+<span class="font-label-caps text-label-caps text-on-surface-variant">TODAY'S SALES</span>
+<span class="w-2 h-2 bg-signal-green rounded-full animate-pulse-signal"></span>
+</div>
+<div class="font-numeral-lg text-numeral-lg text-primary">₹24,500</div>
+<div class="space-y-4 mt-4">
+<div class="bg-surface-container-low p-3 rounded-lg flex justify-between items-center border border-outline-variant/20">
+<span class="text-xs text-on-surface-variant">Nike Size 10</span>
+<span class="font-numeral-md text-sm text-coral">-1</span>
+</div>
+<div class="bg-surface-container-low p-3 rounded-lg flex justify-between items-center border border-outline-variant/20">
+<span class="text-xs text-on-surface-variant">Stock Level</span>
+<span class="font-numeral-md text-sm text-primary">2</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-surface-container-low dark:bg-surface-dim w-full py-12 border-t border-outline-variant/20 mt-section-gap">
+<div class="flex flex-col md:flex-row justify-between items-start gap-8 px-margin-mobile md:px-margin-desktop w-full max-w-7xl mx-auto">
+<div>
+<div class="font-headline-md text-headline-md text-primary mb-4">Munim.ai</div>
+<p class="font-body-sm text-body-sm text-on-surface dark:text-on-surface-variant max-w-sm">
+                    © 2024 Munim.ai. Modern bookkeeping for the living ledger.
+                </p>
+</div>
+<div class="flex flex-col md:flex-row gap-6 md:gap-12">
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors hover:underline" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors hover:underline" href="#">Terms of Service</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors hover:underline" href="#">Contact Us</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors hover:underline" href="#">Documentation</a>
+</div>
+</div>
+</footer>
+<script>
+        // Simple script to handle scroll animations for slide-up elements
+        document.addEventListener('DOMContentLoaded', () => {
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate-slide-up');
+                        entry.target.style.opacity = 1; // ensure visibility
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.animate-on-scroll').forEach(el => {
+                el.style.opacity = 0; // initial state
+                observer.observe(el);
+            });
+        });
+    </script>
+</body></html>

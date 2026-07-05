@@ -1,60 +1,110 @@
 import { useState } from "react";
-import { api } from "../api";
-import type { Business } from "../types";
-import { Card } from "../components/ui";
 
-export function Settings({ business, onSaved }: { business?: Business; onSaved: () => void }) {
-  const [form, setForm] = useState({
-    name: business?.name || "",
-    upi_id: business?.upi_id || "",
-    lang_default: business?.lang_default || "hi",
-  });
-  const [saved, setSaved] = useState(false);
+export default function Settings() {
+  const [shopName, setShopName] = useState("Ramesh General Store");
+  const [phone, setPhone] = useState("+91 98765 43210");
+  const [upiId, setUpiId] = useState("ramesh@paytm");
+  const [language, setLanguage] = useState("English");
 
-  async function save() {
-    if (!business) return;
-    await api.updateBusiness(business.id, form);
-    setSaved(true);
-    onSaved();
-    setTimeout(() => setSaved(false), 2000);
-  }
+  const languages = [
+    { label: "English", value: "English" },
+    { label: "Hindi (हिंदी)", value: "Hindi" },
+    { label: "Marathi (मराठी)", value: "Marathi" },
+  ];
 
   return (
-    <Card className="p-6 max-w-xl">
-      <h3 className="font-bold text-slate-800 mb-4">Shop settings</h3>
-      <div className="space-y-4">
-        <Field label="Shop name">
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input" />
-        </Field>
-        <Field label="WhatsApp number (read-only)">
-          <input value={business?.whatsapp_no || ""} disabled className="input bg-slate-50 text-slate-400" />
-        </Field>
-        <Field label="UPI ID (for payment links)">
-          <input value={form.upi_id} onChange={(e) => setForm({ ...form, upi_id: e.target.value })} className="input" placeholder="shop@okhdfcbank" />
-        </Field>
-        <Field label="Default reply language">
-          <select value={form.lang_default} onChange={(e) => setForm({ ...form, lang_default: e.target.value })} className="input">
-            <option value="hi">Hindi / Hinglish</option>
-            <option value="en">English</option>
-          </select>
-        </Field>
-        <div className="flex items-center gap-3 pt-2">
-          <button onClick={save} className="bg-brand-700 text-white font-semibold px-5 py-2 rounded-lg hover:bg-brand-800">
-            Save changes
+    <div className="max-w-5xl mx-auto space-y-section-gap">
+      <div>
+        <h2 className="font-headline-md text-headline-md text-on-surface">Settings</h2>
+        <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Manage your shop preferences and account.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
+        <div className="space-y-gutter">
+          <div className="bg-surface rounded-xl p-card-padding shadow-soft-depth space-y-6">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary text-[24px]">store</span>
+              <h3 className="font-headline-md text-headline-md text-on-surface">Shop Details</h3>
+            </div>
+
+            <div className="space-y-2">
+              <label className="font-body-sm text-body-sm text-on-surface-variant">Shop Name</label>
+              <input
+                type="text"
+                value={shopName}
+                onChange={(e) => setShopName(e.target.value)}
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-body-sm text-on-surface outline-none placeholder:text-on-surface-variant/60 focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 min-h-touch-target-min"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="font-body-sm text-body-sm text-on-surface-variant">Phone Number</label>
+              <input
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-body-sm text-on-surface outline-none placeholder:text-on-surface-variant/60 focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 min-h-touch-target-min"
+              />
+            </div>
+          </div>
+
+          <div className="bg-surface rounded-xl p-card-padding shadow-soft-depth space-y-6">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary text-[24px]">account_balance_wallet</span>
+              <h3 className="font-headline-md text-headline-md text-on-surface">Payments & Collections</h3>
+            </div>
+
+            <div className="space-y-2">
+              <label className="font-body-sm text-body-sm text-on-surface-variant">Primary UPI ID</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={upiId}
+                  onChange={(e) => setUpiId(e.target.value)}
+                  className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 text-body-sm text-on-surface outline-none placeholder:text-on-surface-variant/60 focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 min-h-touch-target-min"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-secondary-container text-[20px]">check_circle</span>
+              </div>
+              <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 flex items-center gap-1">
+                This UPI ID will be used to generate payment QR codes for customers.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-gutter">
+          <div className="bg-surface rounded-xl p-card-padding shadow-soft-depth space-y-4">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="material-symbols-outlined text-primary text-[24px]">translate</span>
+              <h3 className="font-headline-md text-headline-md text-on-surface">Language Preference</h3>
+            </div>
+
+            <div className="space-y-2">
+              {languages.map((lang) => (
+                <button
+                  key={lang.value}
+                  onClick={() => setLanguage(lang.value)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all min-h-touch-target-min ${
+                    language === lang.value
+                      ? "bg-primary-container/10 border border-primary-container text-on-surface"
+                      : "bg-surface-container-low border border-transparent text-on-surface-variant hover:bg-surface-container-high"
+                  }`}
+                >
+                  <span className={`material-symbols-outlined text-[18px] ${language === lang.value ? "text-primary" : "text-transparent"}`}>
+                    {language === lang.value ? "check" : ""}
+                  </span>
+                  <span className="font-body-lg text-body-lg">{lang.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button className="w-full min-h-touch-target-min rounded-xl border-2 border-error/30 text-error font-body-lg text-body-lg flex items-center justify-center gap-2 hover:bg-error-container/10 transition-all">
+            <span className="material-symbols-outlined text-[20px]">logout</span>
+            Logout of Device
           </button>
-          {saved && <span className="text-sm text-emerald-600 font-medium">✓ Saved</span>}
         </div>
       </div>
-      <style>{`.input{width:100%;border:1px solid #e2e8f0;border-radius:0.6rem;padding:0.55rem 0.8rem;outline:none;font-size:0.9rem}.input:focus{border-color:#0d9488}`}</style>
-    </Card>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</span>
-      <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }

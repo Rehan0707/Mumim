@@ -1,77 +1,96 @@
-import { useEffect, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  ComposedChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { api } from "../api";
-import type { Analytics as A } from "../types";
-import { Card, formatINR } from "../components/ui";
+const days = Array.from({ length: 30 }, (_, i) => {
+  const d = new Date(2026, 8, 1 + i);
+  return {
+    label: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+    value: Math.floor(Math.random() * 30000) + 5000,
+  };
+});
 
-export function Analytics({ bid, refreshKey }: { bid: string; refreshKey: number }) {
-  const [a, setA] = useState<A | null>(null);
+const maxRevenue = Math.max(...days.map((d) => d.value));
 
-  useEffect(() => {
-    if (!bid) return;
-    api.analytics(bid).then(setA).catch(() => {});
-  }, [bid, refreshKey]);
+const topMovers = [
+  { rank: 1, name: "Nike Air Max", detail: "Size 9, White", sold: 42 },
+  { rank: 2, name: "Linen Shirt", detail: "Medium, Beige", sold: 28 },
+  { rank: 3, name: "Filter Roast", detail: "250g bag", sold: 15 },
+];
 
-  if (!a) return <Card className="p-8 text-center text-slate-400">Loading analytics…</Card>;
-
-  // stitch history + forecast for one continuous chart
-  const trend = [
-    ...a.revenue_trend.map((d) => ({ ...d, kind: "actual" as const })),
-    ...a.forecast.map((d) => ({ ...d, forecast: d.revenue, revenue: undefined, kind: "forecast" as const })),
-  ];
-
+export default function Analytics() {
   return (
-    <div className="space-y-6">
-      <Card className="p-5">
-        <h3 className="font-bold text-slate-800 mb-1">Revenue trend & 7-day forecast</h3>
-        <p className="text-xs text-slate-400 mb-4">Solid = actual · dashed = forecast (moving average; LightGBM swap-in later)</p>
-        <ResponsiveContainer width="100%" height={260}>
-          <ComposedChart data={trend} margin={{ left: -10, right: 10, top: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#eef2f1" />
-            <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d) => d.slice(5)} />
-            <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `₹${v / 1000}k`} />
-            <Tooltip formatter={(v: any) => (v == null ? "—" : formatINR(v))} />
-            <Line type="monotone" dataKey="revenue" stroke="#0d9488" strokeWidth={2.5} dot={{ r: 3 }} name="Actual" />
-            <Line type="monotone" dataKey="forecast" stroke="#0d9488" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Forecast" />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </Card>
+    <div className="max-w-5xl mx-auto space-y-section-gap">
+      <div>
+        <h2 className="font-headline-md text-headline-md text-on-surface">Analytics</h2>
+        <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Proof it's working.</p>
+      </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="p-5">
-          <h3 className="font-bold text-slate-800 mb-4">Top selling items</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={a.top_items} layout="vertical" margin={{ left: 20, right: 10 }}>
-              <XAxis type="number" hide />
-              <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: any, n) => (n === "qty" ? `${v} sold` : formatINR(v))} />
-              <Bar dataKey="qty" fill="#10b981" radius={[0, 6, 6, 0]} name="qty" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
+      <div className="flex gap-3">
+        {["30 Days", "Custom"].map((period) => (
+          <button
+            key={period}
+            className={`px-5 py-2 rounded-full font-body-sm text-body-sm min-h-touch-target-min ${
+              period === "30 Days"
+                ? "bg-primary-container text-on-primary-container"
+                : "bg-surface-container-low text-on-surface-variant"
+            }`}
+          >
+            {period}
+          </button>
+        ))}
+      </div>
 
-        <Card className="p-5">
-          <h3 className="font-bold text-slate-800 mb-4">Restock forecast</h3>
-          <div className="space-y-2">
-            {a.low_stock.length === 0 && <p className="text-sm text-slate-400">Everything well-stocked ✅</p>}
-            {a.low_stock.map((l) => (
-              <div key={l.name} className="flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2">
-                <span className="text-sm text-slate-700">{l.name}</span>
-                <span className="text-xs font-semibold text-amber-700">{l.stock_qty} left · reorder soon</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+        <div className="lg:col-span-2 bg-surface rounded-xl p-card-padding shadow-soft-depth">
+          <h3 className="font-headline-md text-headline-md text-on-surface mb-6">Revenue Trend</h3>
+          <p className="font-body-sm text-body-sm text-on-surface-variant mb-4">Last 30 Days</p>
+          <div className="flex items-end justify-between gap-0.5 h-64">
+            {days.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group relative">
+                <div
+                  className="w-full bg-gradient-to-t from-primary to-primary-container/70 rounded-t-sm transition-all duration-300 hover:opacity-80 cursor-pointer"
+                  style={{ height: `${(d.value / maxRevenue) * 100}%` }}
+                />
+                {(i === 0 || i === 14 || i === 29) && (
+                  <span className="font-body-sm text-body-sm text-on-surface-variant text-[10px] -rotate-45 origin-left whitespace-nowrap">
+                    {d.label}
+                  </span>
+                )}
               </div>
             ))}
           </div>
-        </Card>
+        </div>
+
+        <div className="space-y-gutter">
+          <div className="bg-surface rounded-xl p-card-padding shadow-soft-depth">
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-primary text-[24px]">insights</span>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                At this pace, <strong className="text-on-surface">Nike Air (size 9)</strong> runs out in <strong className="text-error">4 days</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-surface rounded-xl p-card-padding shadow-soft-depth">
+            <h3 className="font-headline-md text-headline-md text-on-surface mb-4">Top Movers</h3>
+            <div className="space-y-4">
+              {topMovers.map((item) => (
+                <div key={item.rank} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-7 h-7 rounded-full bg-surface-container-low flex items-center justify-center font-numeral-md text-sm text-on-surface-variant">
+                      {item.rank}
+                    </span>
+                    <div>
+                      <p className="font-body-sm text-body-sm text-on-surface">{item.name}</p>
+                      <p className="font-body-sm text-body-sm text-on-surface-variant">{item.detail}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-numeral-md text-numeral-md text-primary">{item.sold}</span>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant">sold</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
