@@ -11,3 +11,6 @@ sentence-transformers>=2.2.0
 sentencepiece>=0.1.99
 tiktoken>=0.7.0
 protobuf>=4.25.0
+# Receipt/bill OCR for camera-based inventory onboarding (PRD F11). Optional:
+# the /products/scan endpoint returns 503 if not installed, feature degrades gracefully.
+easyocr>=1.7.0

@@ -3,6 +3,13 @@ import type { Analytics, Business, Customer, Order, Product } from "./types";
 // Vite dev proxy maps /api -> backend :8000 and /ws -> backend websocket.
 const API = "/api";
 
+export interface ScannedItem {
+  name: string;
+  price: number;
+  qty: number;
+  stock_qty: number;
+}
+
 export interface MatchCard {
   product_id: string;
   name: string;
@@ -43,6 +50,17 @@ export const api = {
   }).then((r) => r.json()),
   fulfill: (oid: string) => post<Order>(`/orders/${oid}/fulfill`, {}),
   markPaid: (oid: string) => post<Order>(`/payments/webhook`, { order_id: oid, payment_id: "dashboard" }),
+  // Receipt/bill scan -> product candidates (PRD F11)
+  scanReceipt: (bid: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch(`${API}/products/scan?business_id=${bid}`, { method: "POST", body: fd }).then((r) => {
+      if (!r.ok) throw new Error(`${r.status}`);
+      return r.json() as Promise<{ count: number; products: ScannedItem[] }>;
+    });
+  },
+  bulkProducts: (bid: string, products: ScannedItem[]) =>
+    post<{ created: number }>(`/products/bulk?business_id=${bid}`, { products }),
   // WhatsApp simulator -> webhook
   sendWhatsapp: (payload: { from_no: string; type: string; text?: string; media_url?: string; name?: string }) =>
     post<{ reply: string; intent: string; lang: string; matches?: MatchCard[] }>(`/webhook/whatsapp`, payload),

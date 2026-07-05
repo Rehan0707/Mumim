@@ -81,6 +81,24 @@ def test_end_to_end_shop_creation_flow(client):
     assert order["total"] == 998
 
 
+def test_bulk_create_products(client, business_id):
+    before = len(client.get(f"/products?business_id={business_id}").json())
+    r = client.post(f"/products/bulk?business_id={business_id}", json={"products": [
+        {"name": "Bulk A", "price": 10, "stock_qty": 5},
+        {"name": "Bulk B", "price": 20, "stock_qty": 3},
+    ]})
+    assert r.status_code == 201 and r.json()["created"] == 2
+    after = len(client.get(f"/products?business_id={business_id}").json())
+    assert after == before + 2
+
+
+def test_scan_empty_file_rejected(client, business_id):
+    # empty upload is rejected before OCR runs (400); 503 if OCR engine absent
+    r = client.post(f"/products/scan?business_id={business_id}",
+                    files={"file": ("x.png", b"", "image/png")})
+    assert r.status_code in (400, 503)
+
+
 def test_analytics_summary(client, business_id):
     data = client.get(f"/analytics/summary?business_id={business_id}").json()
     assert "kpis" in data
