@@ -1,0 +1,6 @@
+# FashionCLIP visual search deps. Install into the backend venv (single-process
+# demo) or a dedicated ml venv:  pip install -r ml/vision/requirements.txt
+torch>=2.2
+transformers>=4.40
+pillow>=10.0
+numpy>=1.26
