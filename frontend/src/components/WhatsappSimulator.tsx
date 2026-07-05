@@ -23,11 +23,17 @@ export function WhatsappSimulator() {
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [waMode, setWaMode] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  // reflect the backend's actual WhatsApp mode (mock vs live Twilio)
+  useEffect(() => {
+    api.health().then((h) => setWaMode(h.whatsapp_mode)).catch(() => {});
+  }, []);
 
   async function send(payload: { type: string; text?: string; media_url?: string }) {
     if (busy) return;
@@ -162,8 +168,12 @@ export function WhatsappSimulator() {
             </form>
           </div>
         </div>
-        <p className="text-center text-[11px] text-slate-400 mt-3">
-          WhatsApp simulator · mock mode (swap in Twilio later)
+        <p className="text-center text-[11px] mt-3">
+          {waMode === "twilio" ? (
+            <span className="text-emerald-500 font-medium">🟢 Live · Twilio WhatsApp connected</span>
+          ) : (
+            <span className="text-slate-400">WhatsApp preview · mock mode</span>
+          )}
         </p>
       </div>
     </div>

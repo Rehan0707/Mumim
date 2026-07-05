@@ -38,6 +38,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const api = {
+  health: () => get<{ status: string; env: string; payment_mode: string; whatsapp_mode: string }>(`/health`),
   businesses: () => get<Business[]>(`/businesses`),
   products: (bid: string) => get<Product[]>(`/products?business_id=${bid}`),
   orders: (bid: string) => get<Order[]>(`/orders?business_id=${bid}`),
