@@ -8,8 +8,42 @@ import { Orders } from "./pages/Orders";
 import { CRM } from "./pages/CRM";
 import { Analytics } from "./pages/Analytics";
 import { Settings } from "./pages/Settings";
+import Landing from "./pages/Landing";
+import { Auth } from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
+import { loadSession, saveSession } from "./lib/session";
 import type { Business, WsEvent } from "./types";
 import { formatINR } from "./components/ui";
+
+type View = "landing" | "auth" | "onboarding" | "app";
+
+// Front-door router: Landing → Auth → Onboarding → the live Dashboard.
+// The dashboard is unchanged; it just mounts once we reach the "app" view.
+export default function App() {
+  const [view, setView] = useState<View>(() => (loadSession()?.authenticated ? "app" : "landing"));
+
+  if (view === "landing")
+    return <Landing onSignIn={() => setView("auth")} onDashboard={() => setView("app")} />;
+  if (view === "auth")
+    return <Auth onDone={() => setView("onboarding")} />;
+  if (view === "onboarding")
+    return (
+      <Onboarding
+        onBack={() => setView("auth")}
+        onComplete={() => {
+          saveSession({
+            authenticated: true,
+            email: "",
+            role: "owner",
+            shopName: "Ramesh Vastralaya",
+            grantedAt: new Date().toISOString(),
+          });
+          setView("app");
+        }}
+      />
+    );
+  return <Dashboard />;
+}
 
 const PAGE_TITLES: Record<PageKey, string> = {
   home: "Dashboard",
@@ -20,7 +54,7 @@ const PAGE_TITLES: Record<PageKey, string> = {
   settings: "Settings",
 };
 
-export default function App() {
+function Dashboard() {
   const [business, setBusiness] = useState<Business | undefined>();
   const [page, setPage] = useState<PageKey>("home");
   const [live, setLive] = useState(false);
