@@ -1,0 +1,13 @@
+# Real ML stack (heavy — pulls torch). Install to enable the real models:
+#   - multilingual semantic text search (sentence-transformers)
+#   - FashionCLIP visual "Dikhao" search (transformers)
+#   - receipt/bill OCR onboarding (easyocr)
+# Install with:  pip install -r requirements-ml.txt
+# The backend runs without these — features fall back gracefully (hash search,
+# text-hint Dikhao, /products/scan → 503).
+-r requirements.txt
+transformers>=4.46.3
+sentence-transformers>=2.2.0
+sentencepiece>=0.1.99
+protobuf>=4.25.0
+easyocr>=1.7.0

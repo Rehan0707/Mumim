@@ -1,4 +1,6 @@
-# Munim.ai backend — runtime dependencies (all offline-installable, no ML weights).
+# Munim.ai backend — CORE runtime deps (lightweight, no ML weights).
+# The app runs fully on these (mock/hash mode); real ML is opt-in via requirements-ml.txt.
+# All heavy-ML imports in the code are lazy, so nothing here pulls torch.
 # Lower-bound pins so wheels resolve cleanly across Python 3.9–3.13+.
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
@@ -6,11 +8,3 @@ sqlalchemy>=2.0.30
 pydantic>=2.8.0
 python-multipart>=0.0.9
 numpy>=1.26.0
-transformers==4.46.3
-sentence-transformers>=2.2.0
-sentencepiece>=0.1.99
-tiktoken>=0.7.0
-protobuf>=4.25.0
-# Receipt/bill OCR for camera-based inventory onboarding (PRD F11). Optional:
-# the /products/scan endpoint returns 503 if not installed, feature degrades gracefully.
-easyocr>=1.7.0
