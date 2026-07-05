@@ -44,13 +44,8 @@ class Settings:
     FRONTEND_ORIGIN: str = os.environ.get("FRONTEND_ORIGIN", "http://localhost:5173")
 
     # --- data / ML ---
-<<<<<<< Updated upstream
     DATABASE_URL: str = _resolve_db_url(os.environ.get("DATABASE_URL", "sqlite:///./munim.db"))
     EMBEDDING_DIM: int = 384  # matches products.text_embedding VECTOR(384) in the spec
-=======
-    DATABASE_URL: str = os.environ.get("DATABASE_URL", "sqlite:///./munim.db")
-    EMBEDDING_DIM: int = 768  # matches products.text_embedding VECTOR(384) in the spec
->>>>>>> Stashed changes
 
     # --- payments (mock | razorpay) ---
     PAYMENT_MODE: str = os.environ.get("PAYMENT_MODE", "mock").lower()
