@@ -16,6 +16,7 @@ _TMP.close()
 os.environ["DATABASE_URL"] = f"sqlite:///{_TMP.name}"
 os.environ["PAYMENT_MODE"] = "mock"
 os.environ["WHATSAPP_MODE"] = "mock"
+os.environ["MUNIM_EMBEDDER"] = "hash"  # fast, deterministic embeddings in tests
 
 from fastapi.testclient import TestClient  # noqa: E402
 
