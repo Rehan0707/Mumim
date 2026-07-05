@@ -21,3 +21,41 @@ body {
 .flash {
   animation: flash 1.2s ease-out;
 }
+
+/* --- Material Symbols (landing / auth / onboarding pages) --- */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+.material-symbols-outlined.fill { font-variation-settings: "FILL" 1; }
+
+/* --- Lenis smooth scroll (landing page) --- */
+html.lenis { scroll-behavior: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+.lenis.lenis-scrolling iframe { pointer-events: none; }
+
+/* --- animations used by the new pages --- */
+@keyframes pulse-signal {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pulse-signal { animation: pulse-signal 2s infinite ease-in-out; }
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.animate-pulse-ring { animation: pulse-ring 2s infinite ease-out; }
