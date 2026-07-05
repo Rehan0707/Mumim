@@ -4,13 +4,22 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Business
 
 router = APIRouter(tags=["business"])
+
+
+class BusinessCreate(BaseModel):
+    """Shop creation (owner onboarding). Requested in PR #1 to unblock the E2E flow."""
+    name: str = Field(..., min_length=1)
+    whatsapp_no: str = Field(..., min_length=1)
+    category: Optional[str] = None
+    lang_default: str = "hi"
+    upi_id: Optional[str] = None
 
 
 class BusinessUpdate(BaseModel):
@@ -28,6 +37,18 @@ def _serialize(b: Business) -> dict:
 @router.get("/businesses")
 def list_businesses(db: Session = Depends(get_db)):
     return [_serialize(b) for b in db.query(Business).all()]
+
+
+@router.post("/businesses", status_code=201)
+def create_business(body: BusinessCreate, db: Session = Depends(get_db)):
+    """Create a shop (owner onboarding). whatsapp_no must be unique."""
+    if db.query(Business).filter(Business.whatsapp_no == body.whatsapp_no).first():
+        raise HTTPException(409, "a business with this whatsapp_no already exists")
+    business = Business(**body.model_dump())
+    db.add(business)
+    db.commit()
+    db.refresh(business)
+    return _serialize(business)
 
 
 @router.get("/businesses/{business_id}")
