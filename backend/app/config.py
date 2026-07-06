@@ -44,7 +44,7 @@ class Settings:
     FRONTEND_ORIGIN: str = os.environ.get("FRONTEND_ORIGIN", "https://munim-app.web.app")
 
     # --- data / ML ---
-    DATABASE_URL: str = _resolve_db_url(os.environ.get("DATABASE_URL", "postgresql+psycopg://neondb_owner:npg_jQVdWve3fuL4@ep-twilight-unit-atzl2mu0-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"))
+    DATABASE_URL: str = _resolve_db_url(os.environ.get("DATABASE_URL", "sqlite:///./munim.db"))
     EMBEDDING_DIM: int = 384  # matches products.text_embedding VECTOR(384) in the spec
 
     # --- payments (mock | razorpay) ---

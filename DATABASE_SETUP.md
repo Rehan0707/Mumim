@@ -25,7 +25,7 @@ DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/munim
 ### Option C: Neon PostgreSQL Cloud (Production)
 To connect to the managed Neon cloud database, use your connection string with the `+psycopg` driver prefix and SSL enabled:
 ```env
-DATABASE_URL=postgresql+psycopg://neondb_owner:npg_jQVdWve3fuL4@ep-twilight-unit-atzl2mu0-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+DATABASE_URL=postgresql+psycopg://[USER]:[PASSWORD]@[NEON_HOST]/neondb?sslmode=require
 ```
 *(Note: Neon supports the `pgvector` extension natively. The startup lifecycles will automatically register the extension on your Neon cluster).*
 
