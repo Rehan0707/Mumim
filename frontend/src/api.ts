@@ -1,7 +1,14 @@
 import type { Analytics, Business, Customer, Order, Product } from "./types";
 
 // Vite dev proxy maps /api -> backend :8000 and /ws -> backend websocket.
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
+
+export interface ScannedItem {
+  name: string;
+  price: number;
+  qty: number;
+  stock_qty: number;
+}
 
 export interface MatchCard {
   product_id: string;
@@ -31,6 +38,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const api = {
+  health: () => get<{ status: string; env: string; payment_mode: string; whatsapp_mode: string }>(`/health`),
   businesses: () => get<Business[]>(`/businesses`),
   products: (bid: string) => get<Product[]>(`/products?business_id=${bid}`),
   orders: (bid: string) => get<Order[]>(`/orders?business_id=${bid}`),
@@ -43,14 +51,28 @@ export const api = {
   }).then((r) => r.json()),
   fulfill: (oid: string) => post<Order>(`/orders/${oid}/fulfill`, {}),
   markPaid: (oid: string) => post<Order>(`/payments/webhook`, { order_id: oid, payment_id: "dashboard" }),
+  // Receipt/bill scan -> product candidates (PRD F11)
+  scanReceipt: (bid: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch(`${API}/products/scan?business_id=${bid}`, { method: "POST", body: fd }).then((r) => {
+      if (!r.ok) throw new Error(`${r.status}`);
+      return r.json() as Promise<{ count: number; products: ScannedItem[] }>;
+    });
+  },
+  bulkProducts: (bid: string, products: ScannedItem[]) =>
+    post<{ created: number }>(`/products/bulk?business_id=${bid}`, { products }),
   // WhatsApp simulator -> webhook
   sendWhatsapp: (payload: { from_no: string; type: string; text?: string; media_url?: string; name?: string }) =>
     post<{ reply: string; intent: string; lang: string; matches?: MatchCard[] }>(`/webhook/whatsapp`, payload),
 };
 
 export function openDashboardSocket(bid: string, onEvent: (e: any) => void): WebSocket {
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${proto}://${location.host}/ws/dashboard?business_id=${bid}`);
+  let wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/dashboard?business_id=${bid}`;
+  if (import.meta.env.VITE_WS_URL) {
+    wsUrl = `${import.meta.env.VITE_WS_URL}?business_id=${bid}`;
+  }
+  const ws = new WebSocket(wsUrl);
   ws.onmessage = (msg) => {
     try {
       onEvent(JSON.parse(msg.data));

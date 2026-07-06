@@ -1,13 +1,14 @@
 """Pluggable text embedder.
 
-Prefers a real **offline IndicBERT** encoder (Role 2, ml-setup) when its weights are
-present under backend/weights/indic-bert; otherwise falls back to a deterministic
-hashing bag-of-words vectorizer so the backend ALWAYS works — no heavy deps loaded
-at import, no downloads required, no dead search.
+Real path: a **multilingual sentence-transformer**
+(paraphrase-multilingual-MiniLM-L12-v2) — 384-d, understands Hindi/Hinglish/English,
+and matches the schema's text_embedding VECTOR(384). This is the encoder the TRD
+specifies for text search.
 
-Both the catalog (seed) and live queries go through embed_text(), so whichever
-encoder is active, dimensions stay consistent within a deployment. `cosine()` is
-also dimension-safe, so a stray mismatch degrades to 0 instead of crashing.
+Falls back to a deterministic hashing bag-of-words vectorizer (also 384-d) when the
+model/deps are unavailable, so the backend ALWAYS works — no heavy deps at import,
+no gated downloads, no dead search. Set MUNIM_EMBEDDER=hash to force the fast fallback
+(used in tests). Both encoders + the fallback are 384-d, so dimensions never mismatch.
 """
 from __future__ import annotations
 
@@ -25,8 +26,9 @@ from .config import settings
 log = logging.getLogger("munim.embeddings")
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
-_WEIGHTS_DIR = os.path.join(os.path.dirname(__file__), "..", "weights")
-_INDIC_DIR = os.path.join(_WEIGHTS_DIR, "indic-bert")
+_MODEL_NAME = os.environ.get(
+    "MUNIM_EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+)
 
 
 def _tokenize(text: str) -> List[str]:
@@ -49,50 +51,35 @@ def _hash_embed(text: str) -> List[float]:
 
 
 @lru_cache(maxsize=1)
-def _load_indicbert():
-    """Lazy-load IndicBERT once. Returns (tokenizer, model) or None if unavailable.
+def _load_encoder():
+    """Lazy-load the sentence-transformer once. Returns the model or None (→ hashing).
 
-    Heavy deps (torch/transformers) are imported HERE, not at module import, so the
-    backend stays importable without them.
+    Heavy deps are imported HERE, not at module import, so the backend stays importable
+    without them.
     """
-    if not os.path.isdir(_INDIC_DIR):
-        log.info("IndicBERT weights not found (%s) — using hashing embedder", _INDIC_DIR)
+    if os.environ.get("MUNIM_EMBEDDER", "").lower() == "hash":
         return None
     try:
-        import torch  # noqa: F401
-        from transformers import AutoModel, AutoTokenizer
+        from sentence_transformers import SentenceTransformer
 
-        log.info("loading offline IndicBERT …")
-        tokenizer = AutoTokenizer.from_pretrained(_INDIC_DIR)
-        model = AutoModel.from_pretrained(_INDIC_DIR)
-        model.eval()
-        log.info("IndicBERT ready")
-        return tokenizer, model
-    except Exception as exc:  # pragma: no cover - only when weights present but broken
-        log.warning("IndicBERT load failed (%s) — using hashing embedder", exc)
+        log.info("loading sentence-transformer %s …", _MODEL_NAME)
+        model = SentenceTransformer(_MODEL_NAME)
+        log.info("text encoder ready")
+        return model
+    except Exception as exc:
+        log.info("sentence-transformer unavailable (%s) — using hashing embedder", exc)
         return None
 
 
 def embed_text(text: str) -> List[float]:
-    """Embed text → normalized dense vector. IndicBERT if available, else hashing."""
+    """Embed text → normalized 384-d vector. Real multilingual model if available, else hashing."""
     if not text:
         return _hash_embed("")
-    bundle = _load_indicbert()
-    if bundle is None:
+    model = _load_encoder()
+    if model is None:
         return _hash_embed(text)
-
-    import torch
-
-    tokenizer, model = bundle
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-    # mean-pool token vectors → one sentence vector, then normalize
-    vec = outputs.last_hidden_state.mean(dim=1).squeeze().cpu().numpy()
-    norm = float(np.linalg.norm(vec))
-    if norm > 0:
-        vec = vec / norm
-    return vec.astype(np.float32).tolist()
+    vec = model.encode(text, normalize_embeddings=True)
+    return np.asarray(vec, dtype=np.float32).tolist()
 
 
 def cosine(a: List[float], b: List[float]) -> float:

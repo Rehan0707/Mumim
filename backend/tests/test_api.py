@@ -57,6 +57,48 @@ def test_customers_and_history(client, business_id):
     assert "history" in profile
 
 
+def test_create_business_and_duplicate_guard(client):
+    body = {"name": "Priya Boutique", "whatsapp_no": "+919888800000", "category": "clothing", "upi_id": "priya@upi"}
+    r = client.post("/businesses", json=body)
+    assert r.status_code == 201
+    created = r.json()
+    assert created["name"] == "Priya Boutique" and created["id"]
+    # duplicate whatsapp_no is rejected
+    dup = client.post("/businesses", json=body)
+    assert dup.status_code == 409
+
+
+def test_end_to_end_shop_creation_flow(client):
+    # PR #1's blocked flow: create shop -> add product -> order it
+    biz = client.post("/businesses", json={"name": "E2E Shop", "whatsapp_no": "+919777011111", "upi_id": "e2e@upi"}).json()
+    bid = biz["id"]
+    prod = client.post(f"/products?business_id={bid}", json={"name": "Test Tee", "price": 499, "stock_qty": 5}).json()
+    order = client.post("/orders", json={
+        "business_id": bid, "customer_no": "+919777022222",
+        "items": [{"product_id": prod["id"], "qty": 2}],
+    }).json()
+    assert order["status"] == "reserved"
+    assert order["total"] == 998
+
+
+def test_bulk_create_products(client, business_id):
+    before = len(client.get(f"/products?business_id={business_id}").json())
+    r = client.post(f"/products/bulk?business_id={business_id}", json={"products": [
+        {"name": "Bulk A", "price": 10, "stock_qty": 5},
+        {"name": "Bulk B", "price": 20, "stock_qty": 3},
+    ]})
+    assert r.status_code == 201 and r.json()["created"] == 2
+    after = len(client.get(f"/products?business_id={business_id}").json())
+    assert after == before + 2
+
+
+def test_scan_empty_file_rejected(client, business_id):
+    # empty upload is rejected before OCR runs (400); 503 if OCR engine absent
+    r = client.post(f"/products/scan?business_id={business_id}",
+                    files={"file": ("x.png", b"", "image/png")})
+    assert r.status_code in (400, 503)
+
+
 def test_analytics_summary(client, business_id):
     data = client.get(f"/analytics/summary?business_id={business_id}").json()
     assert "kpis" in data

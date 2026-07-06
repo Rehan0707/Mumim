@@ -8,7 +8,10 @@ The same handler drives real Twilio/Meta payloads after normalization.
 """
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from ..db import get_db
@@ -46,7 +49,12 @@ async def _run(db: Session, business: Business, msg: InboundMessage) -> dict:
         await manager.broadcast(business.id, event)
     # twilio mode actively sends the reply; mock mode logs it (the simulator reads
     # the reply from the HTTP response). send_message() branches on WHATSAPP_MODE.
-    whatsapp.send_message(msg.from_no, out["reply"])
+    # An outbound-send failure (e.g. recipient not joined to the sandbox) must never
+    # break inbound processing — log and continue; the reply is still in the response.
+    try:
+        whatsapp.send_message(msg.from_no, out["reply"])
+    except Exception as exc:
+        logging.getLogger("munim.webhook").warning("outbound send failed: %s", exc)
     return out
 
 
