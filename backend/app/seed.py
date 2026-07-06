@@ -57,6 +57,11 @@ CUSTOMERS = [
 
 
 def run() -> None:
+    from .config import settings
+    if not settings.DATABASE_URL.startswith("sqlite"):
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
