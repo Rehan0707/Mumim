@@ -23,35 +23,63 @@ def semantic_search(
 ) -> List[dict]:
     entities = entities or {}
     q_vec = embeddings.embed_text(query)
-    products = (
-    db.query(Product)
-    # .filter(Product.business_id == business_id, Product.is_active.is_(True))
-    .all()
-)
-# Ab yahan print lagao, kyunki yahan tak products variable ban chuka hoga
-    print(f"DEBUG: Found {len(products)} products for business_id {business_id}")
-
     want_size = str(entities.get("size")).lower() if entities.get("size") else None
     keywords = [k.lower() for k in entities.get("keywords", [])]
 
-    scored = []
-    for p in products:
-        score = embeddings.cosine(q_vec, p.text_embedding or [])
+    if db.bind.dialect.name == "postgresql":
+        # Native pgvector database-side search (using <=> operator via Product.text_embedding.cosine_distance)
+        distance_expr = Product.text_embedding.cosine_distance(q_vec)
+        results = (
+            db.query(Product, distance_expr)
+            .filter(Product.business_id == business_id, Product.is_active.is_(True))
+            .order_by(distance_expr)
+            .limit(limit * 3)  # fetch larger candidate pool to apply python keyword/size boosting
+            .all()
+        )
+        scored = []
+        for p, distance in results:
+            # Cosine distance = 1.0 - Cosine similarity
+            score = 1.0 - float(distance) if distance is not None else 0.0
 
-        # keyword overlap boost (brand/name are the strongest signals for a demo)
-        hay = f"{p.name} {p.brand or ''} {p.category or ''}".lower()
-        overlap = sum(1 for k in keywords if k in hay)
-        score += 0.15 * overlap
+            # keyword overlap boost (brand/name are the strongest signals for a demo)
+            hay = f"{p.name} {p.brand or ''} {p.category or ''}".lower()
+            overlap = sum(1 for k in keywords if k in hay)
+            score += 0.15 * overlap
 
-        # attribute (size) boost / penalty
-        attrs = {str(k).lower(): str(v).lower() for k, v in (p.attributes or {}).items()}
-        if want_size:
-            if attrs.get("size") == want_size:
-                score += 0.4
-            elif "size" in attrs:
-                score -= 0.1  # has a size but not the requested one
+            # attribute (size) boost / penalty
+            attrs = {str(k).lower(): str(v).lower() for k, v in (p.attributes or {}).items()}
+            if want_size:
+                if attrs.get("size") == want_size:
+                    score += 0.4
+                elif "size" in attrs:
+                    score -= 0.1  # has a size but not the requested one
 
-        scored.append((score, p))
+            scored.append((score, p))
+    else:
+        # Fallback NumPy in-memory scan (SQLite / testing)
+        products = (
+            db.query(Product)
+            .filter(Product.business_id == business_id, Product.is_active.is_(True))
+            .all()
+        )
+        scored = []
+        for p in products:
+            score = embeddings.cosine(q_vec, p.text_embedding or [])
+
+            # keyword overlap boost (brand/name are the strongest signals for a demo)
+            hay = f"{p.name} {p.brand or ''} {p.category or ''}".lower()
+            overlap = sum(1 for k in keywords if k in hay)
+            score += 0.15 * overlap
+
+            # attribute (size) boost / penalty
+            attrs = {str(k).lower(): str(v).lower() for k, v in (p.attributes or {}).items()}
+            if want_size:
+                if attrs.get("size") == want_size:
+                    score += 0.4
+                elif "size" in attrs:
+                    score -= 0.1  # has a size but not the requested one
+
+            scored.append((score, p))
 
     scored.sort(key=lambda x: x[0], reverse=True)
     return [_to_match(p, score) for score, p in scored[:limit] if score >=   0]
@@ -63,24 +91,42 @@ def image_search(
     query_vec: List[float],
     limit: int = 3,
 ) -> List[dict]:
-    """Cosine search over products.image_embedding (FashionCLIP space, 512-d).
-
-    Used by "Dikhao": embed the customer's screenshot, rank the catalog by image
-    similarity. Products without an image_embedding are skipped. Swap to pgvector
-    by ordering on image_embedding <=> query_vec — scoring stays identical.
+    """Cosine search over products.image_embedding.
+    
+    Uses pgvector database-side query under PostgreSQL, falls back to NumPy cosine scan under SQLite.
     """
     if not query_vec:
         return []
-    products = (
-        db.query(Product)
-        .filter(Product.business_id == business_id, Product.is_active.is_(True))
-        .all()
-    )
-    scored = [
-        (embeddings.cosine(query_vec, p.image_embedding), p)
-        for p in products
-        if p.image_embedding
-    ]
+
+    if db.bind.dialect.name == "postgresql":
+        distance_expr = Product.image_embedding.cosine_distance(query_vec)
+        results = (
+            db.query(Product, distance_expr)
+            .filter(
+                Product.business_id == business_id,
+                Product.is_active.is_(True),
+                Product.image_embedding.isnot(None)
+            )
+            .order_by(distance_expr)
+            .limit(limit)
+            .all()
+        )
+        scored = []
+        for p, distance in results:
+            score = 1.0 - float(distance) if distance is not None else 0.0
+            scored.append((score, p))
+    else:
+        products = (
+            db.query(Product)
+            .filter(Product.business_id == business_id, Product.is_active.is_(True))
+            .all()
+        )
+        scored = [
+            (embeddings.cosine(query_vec, p.image_embedding), p)
+            for p in products
+            if p.image_embedding
+        ]
+
     scored.sort(key=lambda x: x[0], reverse=True)
     return [_to_match(p, score) for score, p in scored[:limit] if score > 0]
 

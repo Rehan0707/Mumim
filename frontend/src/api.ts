@@ -1,7 +1,7 @@
 import type { Analytics, Business, Customer, Order, Product } from "./types";
 
 // Vite dev proxy maps /api -> backend :8000 and /ws -> backend websocket.
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 export interface ScannedItem {
   name: string;
@@ -68,8 +68,11 @@ export const api = {
 };
 
 export function openDashboardSocket(bid: string, onEvent: (e: any) => void): WebSocket {
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${proto}://${location.host}/ws/dashboard?business_id=${bid}`);
+  let wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/dashboard?business_id=${bid}`;
+  if (import.meta.env.VITE_WS_URL) {
+    wsUrl = `${import.meta.env.VITE_WS_URL}?business_id=${bid}`;
+  }
+  const ws = new WebSocket(wsUrl);
   ws.onmessage = (msg) => {
     try {
       onEvent(JSON.parse(msg.data));

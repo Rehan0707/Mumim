@@ -39,7 +39,21 @@ TAGS_METADATA = [
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if not settings.DATABASE_URL.startswith("sqlite"):
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
     Base.metadata.create_all(bind=engine)
+    
+    # Auto-seed if database is empty (Render deployment)
+    from .db import SessionLocal
+    from .models import Business
+    from .seed import run as seed_db
+    
+    with SessionLocal() as db:
+        if not db.query(Business).first():
+            seed_db()
+
     log.info(
         "Munim.ai starting | env=%s payment=%s whatsapp=%s db=%s",
         settings.APP_ENV, settings.PAYMENT_MODE, settings.WHATSAPP_MODE,
