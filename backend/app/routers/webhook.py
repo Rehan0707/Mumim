@@ -8,10 +8,11 @@ The same handler drives real Twilio/Meta payloads after normalization.
 """
 from __future__ import annotations
 
+from html import escape
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from ..db import get_db
@@ -22,6 +23,11 @@ from ..services import pipeline
 from ..ws import manager
 
 router = APIRouter(prefix="/webhook", tags=["webhook"])
+
+# Twilio retries the same inbound MessageSid when a webhook times out or returns
+# a transient error. Cache the normalized pipeline output in-process so a retry
+# cannot place the same order twice during a live demo.
+_TWILIO_CACHE: dict[str, dict] = {}
 
 
 @router.get("/whatsapp")
@@ -40,7 +46,7 @@ def _resolve_business(db: Session, business_id: str = None) -> Business:
     return business
 
 
-async def _run(db: Session, business: Business, msg: InboundMessage) -> dict:
+async def _run(db: Session, business: Business, msg: InboundMessage, send_outbound: bool = True) -> dict:
     out = pipeline.handle_message(
         db, business, from_no=msg.from_no, input_type=msg.type,
         text=msg.text, media_url=msg.media_url, customer_name=msg.name,
@@ -51,11 +57,30 @@ async def _run(db: Session, business: Business, msg: InboundMessage) -> dict:
     # the reply from the HTTP response). send_message() branches on WHATSAPP_MODE.
     # An outbound-send failure (e.g. recipient not joined to the sandbox) must never
     # break inbound processing — log and continue; the reply is still in the response.
-    try:
-        import asyncio
-        asyncio.create_task(whatsapp.send_message(msg.from_no, out["reply"]))
-    except Exception as exc:
-        logging.getLogger("munim.webhook").warning("outbound send failed: %s", exc)
+    if send_outbound:
+        try:
+            import asyncio
+            asyncio.create_task(whatsapp.send_message(msg.from_no, out["reply"]))
+        except Exception as exc:
+            logging.getLogger("munim.webhook").warning("outbound send failed: %s", exc)
+    return out
+
+
+def _twilio_type(form) -> str:
+    """Map Twilio's media fields to Munim's input_type values."""
+    if form.get("NumMedia") in (None, "0", 0):
+        return "text"
+    content_type = str(form.get("MediaContentType0") or "").lower()
+    if content_type.startswith("audio/"):
+        return "voice"
+    if content_type.startswith("image/"):
+        return "image"
+    return "image"
+
+
+def _twiml(reply: str) -> Response:
+    body = f'<?xml version="1.0" encoding="UTF-8"?><Response><Message>{escape(reply or "")}</Message></Response>'
+    return Response(content=body, media_type="application/xml")
 
 
 @router.post("/whatsapp")
@@ -66,30 +91,25 @@ async def inbound(request: Request, db: Session = Depends(get_db)):
     if "application/json" in content_type:
         payload = await request.json()
         msg = InboundMessage(**payload)
+        business = _resolve_business(db, msg.business_id)
+        out = await _run(db, business, msg)
+        return {"reply": out["reply"], "intent": out["intent"], "lang": out["lang"],
+                "matches": out.get("matches", [])}
     else:  # Twilio sandbox posts form-encoded
         form = await request.form()
+        sid = str(form.get("MessageSid") or form.get("SmsMessageSid") or "")
+        if sid and sid in _TWILIO_CACHE:
+            return _twiml(_TWILIO_CACHE[sid]["reply"])
         msg = InboundMessage(
             from_no=str(form.get("From", "")).replace("whatsapp:", ""),
-            type="image" if form.get("NumMedia") not in (None, "0") else "text",
+            type=_twilio_type(form),
             text=form.get("Body"),
             media_url=form.get("MediaUrl0"),
         )
-    
-    # Safety check: agar msg nahi bana toh error return karo
-    if msg is None:
-        return {"error": "Invalid request payload"}
-
-    business = _resolve_business(db, msg.business_id)
-    out = await _run(db, business, msg)
-    
-    # Safety check: agar out None hai toh default response bhejo[cite: 1]
-    if not out:
-        return {"reply": "Sorry, I couldn't process that.", "intent": "unknown", "lang": "en", "matches": []}
-    
-    # .get() ka use karo taaki key missing hone par code crash na ho[cite: 1]
-    return {
-        "reply": out.get("reply", "No reply generated"), 
-        "intent": out.get("intent", "unknown"), 
-        "lang": out.get("lang", "en"),
-        "matches": out.get("matches", [])
-    }
+        business = _resolve_business(db, msg.business_id)
+        # Twilio can send replies straight from the webhook response. That is more
+        # reliable for the Sandbox than doing a second REST API call from localhost.
+        out = await _run(db, business, msg, send_outbound=False)
+        if sid:
+            _TWILIO_CACHE[sid] = out
+        return _twiml(out.get("reply", ""))

@@ -6,6 +6,7 @@ candidate fetch to an ORDER BY embedding <=> query_vec query — scoring stays t
 """
 from __future__ import annotations
 
+import re
 from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
@@ -26,63 +27,50 @@ def semantic_search(
     want_size = str(entities.get("size")).lower() if entities.get("size") else None
     keywords = [k.lower() for k in entities.get("keywords", [])]
 
-    if db.bind.dialect.name == "postgresql":
-        # Native pgvector database-side search (using <=> operator via Product.text_embedding.cosine_distance)
-        distance_expr = Product.text_embedding.cosine_distance(q_vec)
-        results = (
-            db.query(Product, distance_expr)
-            .filter(Product.business_id == business_id, Product.is_active.is_(True))
-            .order_by(distance_expr)
-            .limit(limit * 3)  # fetch larger candidate pool to apply python keyword/size boosting
-            .all()
-        )
-        scored = []
-        for p, distance in results:
-            # Cosine distance = 1.0 - Cosine similarity
-            score = 1.0 - float(distance) if distance is not None else 0.0
-
-            # keyword overlap boost (brand/name are the strongest signals for a demo)
-            hay = f"{p.name} {p.brand or ''} {p.category or ''}".lower()
-            overlap = sum(1 for k in keywords if k in hay)
-            score += 0.15 * overlap
-
-            # attribute (size) boost / penalty
-            attrs = {str(k).lower(): str(v).lower() for k, v in (p.attributes or {}).items()}
-            if want_size:
-                if attrs.get("size") == want_size:
-                    score += 0.4
-                elif "size" in attrs:
-                    score -= 0.1  # has a size but not the requested one
-
-            scored.append((score, p))
-    else:
-        # Fallback NumPy in-memory scan (SQLite / testing)
-        products = (
-            db.query(Product)
-            .filter(Product.business_id == business_id, Product.is_active.is_(True))
-            .all()
-        )
-        scored = []
-        for p in products:
-            score = embeddings.cosine(q_vec, p.text_embedding or [])
-
-            # keyword overlap boost (brand/name are the strongest signals for a demo)
-            hay = f"{p.name} {p.brand or ''} {p.category or ''}".lower()
-            overlap = sum(1 for k in keywords if k in hay)
-            score += 0.15 * overlap
-
-            # attribute (size) boost / penalty
-            attrs = {str(k).lower(): str(v).lower() for k, v in (p.attributes or {}).items()}
-            if want_size:
-                if attrs.get("size") == want_size:
-                    score += 0.4
-                elif "size" in attrs:
-                    score -= 0.1  # has a size but not the requested one
-
-            scored.append((score, p))
+    # Demo catalogs are intentionally small (~25 SKUs), so scan all active products
+    # and blend lexical + vector scores. This is more robust than trusting a
+    # database-side vector shortlist when deployed data was embedded by an older
+    # model/hash version.
+    products = (
+        db.query(Product)
+        .filter(Product.business_id == business_id, Product.is_active.is_(True))
+        .all()
+    )
+    scored = [
+        (_product_score(p, q_vec, keywords, want_size), p)
+        for p in products
+    ]
 
     scored.sort(key=lambda x: x[0], reverse=True)
     return [_to_match(p, score) for score, p in scored[:limit] if score >=   0]
+
+
+def _product_score(p: Product, q_vec: list[float], keywords: list[str], want_size: str | None) -> float:
+    score = embeddings.cosine(q_vec, p.text_embedding or [])
+    hay = f"{p.name} {p.brand or ''} {p.category or ''}".lower()
+    hay_words = set(re.findall(r"[a-z0-9]+", hay))
+
+    synonyms = {
+        "shoe": {"shoe", "shoes", "sneaker", "sneakers", "footwear"},
+        "shoes": {"shoe", "shoes", "sneaker", "sneakers", "footwear"},
+        "sneaker": {"shoe", "shoes", "sneaker", "sneakers", "footwear"},
+        "sneakers": {"shoe", "shoes", "sneaker", "sneakers", "footwear"},
+    }
+    for keyword in keywords:
+        variants = synonyms.get(keyword, {keyword})
+        if any(v in hay_words or v in hay for v in variants):
+            score += 0.45
+        if p.brand and keyword == p.brand.lower():
+            score += 0.6
+
+    attrs = {str(k).lower(): str(v).lower() for k, v in (p.attributes or {}).items()}
+    if want_size:
+        if attrs.get("size") == want_size:
+            score += 0.5
+        elif "size" in attrs:
+            score -= 0.15
+
+    return score
 
 
 def image_search(

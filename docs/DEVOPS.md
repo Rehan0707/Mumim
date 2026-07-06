@@ -68,9 +68,16 @@ All config is env-based (`app/config.py`, loaded from `.env`).
 1. Activate the Twilio WhatsApp Sandbox; note the join code + sandbox number.
 2. Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`.
 3. Expose the backend publicly (see ngrok below) and point the Sandbox
-   "When a message comes in" webhook to `https://<url>/webhook/whatsapp`.
-4. Inbound Twilio form payloads are normalized in `routers/webhook.py`; outbound
-   replies are sent via `integrations/whatsapp.py` (stdlib urllib, no SDK).
+   **When a message comes in** webhook to `https://<url>/webhook/whatsapp`
+   with method `POST`.
+4. Have each tester join the Sandbox from WhatsApp by sending the console's
+   `join <code>` message to the Twilio Sandbox number.
+5. Inbound Twilio form payloads are normalized in `routers/webhook.py`. For live
+   Sandbox replies, the webhook returns TwiML directly, so the bot answers in the
+   same request and does not depend on a second outbound REST call. JSON simulator
+   requests still receive the normal JSON response.
+
+Ngrok URLs change when the tunnel restarts, so refresh this value before a demo.
 
 ### Payments — Razorpay (`PAYMENT_MODE=razorpay`)
 

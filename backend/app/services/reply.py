@@ -9,8 +9,8 @@ from typing import List, Optional
 import os
 from groq import Groq
 
-# Groq client ko initialize kar rahe hain
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# Groq client ko initialize kar rahe hain (uses dummy key if missing to avoid import crashes)
+client = Groq(api_key=os.getenv("GROQ_API_KEY") or "DUMMY_KEY_FOR_TESTS")
 LOW_STOCK_THRESHOLD = 3
 
 

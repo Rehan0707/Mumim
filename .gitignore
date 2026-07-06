@@ -42,3 +42,4 @@ design/**/*.mov
 # Local Environment and ML Weights
 backend/venv/
 backend/weights/
+.vercel

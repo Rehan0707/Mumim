@@ -1,4 +1,4 @@
-import type { Analytics, Business, Customer, Order, Product } from "./types";
+import type { Analytics, Business, Customer, DailySummary, Order, Product, Recommendation } from "./types";
 
 // Vite dev proxy maps /api -> backend :8000 and /ws -> backend websocket.
 const API = import.meta.env.VITE_API_URL || "/api";
@@ -46,6 +46,11 @@ export const api = {
   customer: (bid: string, wa: string) =>
     get<Customer & { history: Order[] }>(`/customers/${encodeURIComponent(wa)}?business_id=${bid}`),
   analytics: (bid: string) => get<Analytics>(`/analytics/summary?business_id=${bid}`),
+  dailySummary: (bid: string) => get<DailySummary>(`/analytics/daily-summary?business_id=${bid}`),
+  recommendations: (bid: string, productId?: string) =>
+    get<{ recommendations: Recommendation[] }>(
+      `/recommendations?business_id=${bid}${productId ? `&product_id=${productId}` : ""}`
+    ),
   updateBusiness: (bid: string, body: Partial<Business>) => fetch(`${API}/businesses/${bid}`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   }).then((r) => r.json()),

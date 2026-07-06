@@ -104,6 +104,23 @@ def test_analytics_summary(client, business_id):
     assert "kpis" in data
     assert "revenue_trend" in data and len(data["revenue_trend"]) == 7
     assert "forecast" in data and len(data["forecast"]) == 7
+    assert "recommendations" in data and data["recommendations"]
+
+
+def test_daily_whatsapp_summary(client, business_id):
+    data = client.get(f"/analytics/daily-summary?business_id={business_id}").json()
+    assert data["channel"] == "whatsapp"
+    assert "Orders today:" in data["message"]
+    assert "Restock:" in data["message"]
+    assert "kpis" in data
+
+
+def test_recommendations_endpoint(client, business_id):
+    products = client.get(f"/products?business_id={business_id}").json()
+    data = client.get(f"/recommendations?business_id={business_id}&product_id={products[0]['id']}").json()
+    assert data["recommendations"]
+    assert all(r["product_id"] != products[0]["id"] for r in data["recommendations"])
+    assert all("reason" in r for r in data["recommendations"])
 
 
 def test_nlu_endpoint(client):
