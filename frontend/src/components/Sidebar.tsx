@@ -56,6 +56,15 @@ export function Sidebar({
         </div>
         <div className="mt-2 text-sm font-semibold truncate">{business?.name || "—"}</div>
         <div className="text-xs text-brand-100/50">{business?.whatsapp_no}</div>
+        <button
+          onClick={() => {
+            localStorage.removeItem("munim.demo_session.v1");
+            window.location.reload();
+          }}
+          className="mt-3 w-full text-left text-xs text-brand-100/40 hover:text-brand-300 transition"
+        >
+          🚪 Exit to Main Website
+        </button>
       </div>
     </aside>
   );
