@@ -52,10 +52,10 @@ async def _run(db: Session, business: Business, msg: InboundMessage) -> dict:
     # An outbound-send failure (e.g. recipient not joined to the sandbox) must never
     # break inbound processing — log and continue; the reply is still in the response.
     try:
-        whatsapp.send_message(msg.from_no, out["reply"])
+        import asyncio
+        asyncio.create_task(whatsapp.send_message(msg.from_no, out["reply"]))
     except Exception as exc:
         logging.getLogger("munim.webhook").warning("outbound send failed: %s", exc)
-    return out
 
 
 @router.post("/whatsapp")
