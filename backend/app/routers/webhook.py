@@ -61,6 +61,8 @@ async def _run(db: Session, business: Business, msg: InboundMessage) -> dict:
 @router.post("/whatsapp")
 async def inbound(request: Request, db: Session = Depends(get_db)):
     content_type = request.headers.get("content-type", "")
+    msg = None  # msg ko yahan initialize karna zaroori hai
+
     if "application/json" in content_type:
         payload = await request.json()
         msg = InboundMessage(**payload)
@@ -72,7 +74,22 @@ async def inbound(request: Request, db: Session = Depends(get_db)):
             text=form.get("Body"),
             media_url=form.get("MediaUrl0"),
         )
+    
+    # Safety check: agar msg nahi bana toh error return karo
+    if msg is None:
+        return {"error": "Invalid request payload"}
+
     business = _resolve_business(db, msg.business_id)
     out = await _run(db, business, msg)
-    return {"reply": out["reply"], "intent": out["intent"], "lang": out["lang"],
-            "matches": out.get("matches", [])}
+    
+    # Safety check: agar out None hai toh default response bhejo[cite: 1]
+    if not out:
+        return {"reply": "Sorry, I couldn't process that.", "intent": "unknown", "lang": "en", "matches": []}
+    
+    # .get() ka use karo taaki key missing hone par code crash na ho[cite: 1]
+    return {
+        "reply": out.get("reply", "No reply generated"), 
+        "intent": out.get("intent", "unknown"), 
+        "lang": out.get("lang", "en"),
+        "matches": out.get("matches", [])
+    }
