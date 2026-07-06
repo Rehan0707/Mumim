@@ -6,7 +6,11 @@ Hinglish for lang='hi', plain English for lang='en'.
 from __future__ import annotations
 
 from typing import List, Optional
+import os
+from groq import Groq
 
+# Groq client ko initialize kar rahe hain
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 LOW_STOCK_THRESHOLD = 3
 
 
@@ -86,10 +90,32 @@ def last_order(order: Optional[dict], lang: str) -> str:
     return f"Your last order was: {items} — {price}. Want it again? 🙂"
 
 
-def fallback(lang: str) -> str:
-    """Spec: demo never dead-ends — route to owner."""
-    return (
-        "Ek minute, main check karke batata hoon 🙏"
-        if lang == "hi"
-        else "One minute, let me check and get back to you 🙏"
-    )
+def fallback(lang: str, user_message: str = "") -> str:
+    """Smart fallback powered by Llama 3 on Groq."""
+    
+    # Agar function call mein user_message nahi pass hua, toh purana reply de do
+    if not user_message:
+        return "Ek minute, main check karke batata hoon 🙏" if lang == "hi" else "One minute, let me check and get back to you 🙏"
+    
+    # Llama 3 ka dimaag (System Prompt)
+    system_prompt = system_prompt = """Tu ek smart, polite aur conversational WhatsApp shopping assistant hai. 
+    Tera kaam user ke messages ka natural modern hindi english mix me chota aur friendly reply karna hai. 
+    Lekin dhyan rahe, angrezi ka literal translation mat karna (jaise 'I am cool' ko 'Main thanda hu' nahi bolna hai). 
+    Agar user 'Hi/Hello/Kaise ho' bole, toh naturally jawab de jaise: 'Main badhiya hu! Boliye aaj main aapki kya madad kar sakta hu?'
+    Kripya sirf plain text reply de, koi code ya lists mat bhej."""
+
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            model="llama-3.1-8b-instant",
+            temperature=0.7
+        )
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        # Yeh line terminal mein exact error chhap degi
+        print(f"\n🔥🔥 GROQ API ERROR: {e} 🔥🔥\n")
+        
+        return "Ek minute, main check karke batata hoon 🙏" if lang == "hi" else "One minute, let me check and get back to you 🙏"

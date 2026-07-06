@@ -24,10 +24,12 @@ def semantic_search(
     entities = entities or {}
     q_vec = embeddings.embed_text(query)
     products = (
-        db.query(Product)
-        .filter(Product.business_id == business_id, Product.is_active.is_(True))
-        .all()
-    )
+    db.query(Product)
+    # .filter(Product.business_id == business_id, Product.is_active.is_(True))
+    .all()
+)
+# Ab yahan print lagao, kyunki yahan tak products variable ban chuka hoga
+    print(f"DEBUG: Found {len(products)} products for business_id {business_id}")
 
     want_size = str(entities.get("size")).lower() if entities.get("size") else None
     keywords = [k.lower() for k in entities.get("keywords", [])]
@@ -52,7 +54,7 @@ def semantic_search(
         scored.append((score, p))
 
     scored.sort(key=lambda x: x[0], reverse=True)
-    return [_to_match(p, score) for score, p in scored[:limit] if score > 0]
+    return [_to_match(p, score) for score, p in scored[:limit] if score >=   0]
 
 
 def image_search(

@@ -12,10 +12,11 @@ from typing import Dict, List, Optional
 
 # --- keyword lexicons (English + common Hinglish/Marathi romanizations) ---
 _GREETING = {"hi", "hello", "hey", "namaste", "namaskar", "hii"}
-_ORDER = {"order", "buy", "chahiye", "chahie", "de do", "dedo", "reserve", "book",
-          "confirm", "haan", "haa", "yes", "ok", "okay", "karun", "karu", "lelo", "want"}
 _QUERY = {"available", "avail", "hai", "milega", "milta", "price", "kitna", "kitne",
-          "rate", "stock", "size", "kya", "do you have", "have"}
+          "rate", "stock", "size", "kya", "do you have", "have", "dikhao", "show", "details"} # 'dikhao' aur 'details' add kiya
+
+_ORDER = {"order", "buy", "chahiye", "chahie", "de do", "dedo", "reserve", "book",
+          "confirm", "haan", "haa", "yes", "ok", "okay", "karun", "karu", "lelo", "want", "khareedna", "kar do", "kardo", "yes", "haan", "reserve it"} # 'khareedna' add kiya
 _LAST_ORDER = {"last order", "previous", "pichla", "history", "purana", "last time"}
 _COMPLAINT = {"complaint", "problem", "issue", "kharab", "defective", "wrong", "return", "refund"}
 

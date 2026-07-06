@@ -25,9 +25,11 @@ from . import crm, nlu, orders, payments, reply, search, vision
 _PENDING: Dict[str, dict] = {}
 
 
-def _key(business_id: str, customer_no: str) -> str:
-    return f"{business_id}:{customer_no}"
-
+def _key(business_id: str, whatsapp_no: str) -> str:
+    generated_key = f"{business_id}:{whatsapp_no}"
+    # Yahan print laga do
+    print(f"DEBUG: Generated Key for _PENDING -> {generated_key}")
+    return generated_key
 
 def _log_message(db: Session, business_id: str, customer_id: Optional[str], direction: str,
                  input_type: str, text: str, intent: Optional[str] = None, lang: Optional[str] = None,
@@ -89,12 +91,13 @@ def _dispatch(db, business, customer, result, events, cards) -> str:
         return reply.last_order(orders.serialize(last) if last else None, lang)
 
     if intent == "COMPLAINT" or intent == "UNKNOWN":
-        return reply.fallback(lang)
+        # Ab hum Llama 3 ko user ka original message (result.raw) bhej rahe hain
+        return reply.fallback(lang, user_message=result.raw)
 
     if intent == "ORDER":
         # Confirmation of a pending reserve? -> place the order.
         pending = _PENDING.get(key)
-        confirm_words = {"yes", "haan", "haa", "ok", "okay", "confirm", "karun", "karu", "reserve"}
+        confirm_words = {"yes", "haan", "haa", "ok", "okay", "confirm", "karun", "karu", "reserve", "kar do", "reserve it"}
         is_confirm = bool(set(result.raw.lower().split()) & confirm_words)
         if pending and (is_confirm or not entities.get("keywords")):
             return _place(db, business, customer, pending, lang, events, key)
@@ -115,6 +118,7 @@ def _query_and_stage(db, business, customer, result, lang, events, key, cards) -
         "product_id": top["product_id"],
         "qty": int(result.entities.get("qty", 1)),
         "name": top["name"],
+        "business_id": business.id
     }
     cards.append(top)  # show the matched product (with photo) in chat
     return reply.availability(top, lang)
