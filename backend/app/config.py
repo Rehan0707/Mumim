@@ -41,7 +41,7 @@ class Settings:
     # --- app ---
     APP_ENV: str = os.environ.get("APP_ENV", "development")
     LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO").upper()
-    FRONTEND_ORIGIN: str = os.environ.get("FRONTEND_ORIGIN", "http://localhost:5173")
+    FRONTEND_ORIGIN: str = os.environ.get("FRONTEND_ORIGIN", "https://munim-app.web.app")
 
     # --- data / ML ---
     DATABASE_URL: str = _resolve_db_url(os.environ.get("DATABASE_URL", "sqlite:///./munim.db"))

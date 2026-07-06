@@ -53,3 +53,37 @@ export function Badge({ kind, value }: { kind: "segment" | "status"; value: stri
     </span>
   );
 }
+
+// --- Material-styled primitives used by the landing / auth / onboarding pages ---
+export function Button({
+  className,
+  variant = "primary",
+  children,
+  ...rest
+}: {
+  className?: string;
+  variant?: "primary" | "secondary" | "ghost";
+  children?: ReactNode;
+  [key: string]: unknown;
+}) {
+  const base = "inline-flex items-center justify-center min-h-[48px] rounded-xl font-display font-semibold transition-all duration-150";
+  const styles: Record<string, string> = {
+    primary: "bg-primary-container text-white shadow-float-depth hover:scale-95",
+    secondary: "border border-primary-container text-primary-container bg-transparent hover:bg-primary-container/10",
+    ghost: "text-primary hover:bg-primary-container/10",
+  };
+  return (
+    <button className={`${base} ${styles[variant]} ${className ?? ""}`} {...(rest as object)}>
+      {children}
+    </button>
+  );
+}
+
+export function Input({ className, ...rest }: { className?: string; [key: string]: unknown }) {
+  return (
+    <input
+      className={`rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface outline-none placeholder:text-on-surface-variant/60 focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 ${className ?? ""}`}
+      {...(rest as object)}
+    />
+  );
+}

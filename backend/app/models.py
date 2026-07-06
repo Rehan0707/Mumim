@@ -26,7 +26,16 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .config import settings
 from .db import Base
+
+if settings.DATABASE_URL.startswith("sqlite"):
+    text_embedding_type = JSON
+    image_embedding_type = JSON
+else:
+    from pgvector.sqlalchemy import Vector
+    text_embedding_type = Vector(settings.EMBEDDING_DIM)
+    image_embedding_type = Vector(512)
 
 
 def _uuid() -> str:
@@ -60,8 +69,8 @@ class Product(Base):
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     stock_qty: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     image_url: Mapped[Optional[str]] = mapped_column(Text)
-    text_embedding: Mapped[Optional[list]] = mapped_column(JSON)   # VECTOR(384)
-    image_embedding: Mapped[Optional[list]] = mapped_column(JSON)  # VECTOR(512)
+    text_embedding: Mapped[Optional[list]] = mapped_column(text_embedding_type)
+    image_embedding: Mapped[Optional[list]] = mapped_column(image_embedding_type)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
