@@ -82,10 +82,14 @@ def embed_text(text: str) -> List[float]:
     return np.asarray(vec, dtype=np.float32).tolist()
 
 
-def cosine(a: List[float], b: List[float]) -> float:
-    if not a or not b or len(a) != len(b):  # dim guard: never crash on mismatch
+def cosine(a, b) -> float:
+    # numpy-safe: a/b may be lists OR numpy arrays (pgvector returns arrays), so we
+    # never use truthiness on them.
+    if a is None or b is None:
         return 0.0
     va, vb = np.asarray(a, dtype=np.float32), np.asarray(b, dtype=np.float32)
+    if va.size == 0 or vb.size == 0 or va.shape != vb.shape:  # dim guard: never crash
+        return 0.0
     na, nb = np.linalg.norm(va), np.linalg.norm(vb)
     if na == 0 or nb == 0:
         return 0.0

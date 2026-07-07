@@ -46,7 +46,8 @@ def semantic_search(
 
 
 def _product_score(p: Product, q_vec: list[float], keywords: list[str], want_size: str | None) -> float:
-    score = embeddings.cosine(q_vec, p.text_embedding or [])
+    emb = p.text_embedding
+    score = embeddings.cosine(q_vec, emb if emb is not None else [])
     hay = f"{p.name} {p.brand or ''} {p.category or ''}".lower()
     hay_words = set(re.findall(r"[a-z0-9]+", hay))
 
@@ -112,7 +113,7 @@ def image_search(
         scored = [
             (embeddings.cosine(query_vec, p.image_embedding), p)
             for p in products
-            if p.image_embedding
+            if p.image_embedding is not None
         ]
 
     scored.sort(key=lambda x: x[0], reverse=True)
