@@ -46,13 +46,15 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     
     # Auto-seed if database is empty (Render deployment)
-    from .db import SessionLocal
-    from .models import Business
-    from .seed import run as seed_db
-    
-    with SessionLocal() as db:
-        if not db.query(Business).first():
-            seed_db()
+    import os
+    if os.environ.get("AUTO_SEED", "").strip().lower() in {"1", "true", "yes"}:
+        from .db import SessionLocal
+        from .models import Business
+        from .seed import run as seed_db
+        
+        with SessionLocal() as db:
+            if not db.query(Business).first():
+                seed_db()
 
     log.info(
         "Munim.ai starting | env=%s payment=%s whatsapp=%s db=%s",
