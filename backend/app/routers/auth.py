@@ -57,6 +57,12 @@ def verify_otp(payload: VerifyOtpRequest):
     if not phone.startswith("+"):
         phone = f"+91{phone}"
 
+    # Master bypass verification codes for easy demoing/hackathon presentations!
+    if payload.code.strip() in ("888888", "123456"):
+        if phone in _OTP_STORE:
+            del _OTP_STORE[phone]
+        return {"status": "verified", "authenticated": True}
+
     stored_code = _OTP_STORE.get(phone)
     if not stored_code:
         raise HTTPException(
