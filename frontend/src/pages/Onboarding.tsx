@@ -91,6 +91,24 @@ export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
           </button>
         </div>
 
+        {selected === "link" && (
+          <div className="w-full bg-surface rounded-2xl p-6 shadow-soft-depth border border-outline-variant/20 flex flex-col items-center gap-3">
+            <p className="font-body-sm text-body-sm text-on-surface-variant font-medium text-center">
+              Using Twilio Sandbox? Scan this QR code to join the sandbox and receive messages on WhatsApp:
+            </p>
+            <div className="w-36 h-36 bg-white border border-outline-variant rounded-lg p-2 flex items-center justify-center">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent("https://wa.me/14155238886?text=join%20double-john")}`}
+                alt="Twilio Sandbox QR Code"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <p className="font-mono text-xs text-brand-700 bg-brand-50 border border-brand-100 rounded-lg px-3 py-1 font-semibold">
+              join double-john
+            </p>
+          </div>
+        )}
+
         <div className="w-full flex flex-col gap-4">
           <button
             onClick={onComplete}

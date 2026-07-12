@@ -117,6 +117,16 @@ def update_product(product_id: str, body: ProductIn, db: Session = Depends(get_d
     return _serialize(product)
 
 
+@router.delete("/products/{product_id}")
+def delete_product(product_id: str, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
+    product = db.get(Product, product_id)
+    if product is None:
+        raise HTTPException(404, "product not found")
+    product.is_active = False  # soft delete
+    db.commit()
+    return {"status": "deleted"}
+
+
 @router.post("/search/semantic")
 def semantic(body: SemanticSearchRequest, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     return {"matches": search.semantic_search(db, body.business_id, body.query, limit=5)}

@@ -19,6 +19,11 @@ export function Orders({ bid, refreshKey, onChange }: { bid: string; refreshKey:
     await api.fulfill(o.id);
     onChange();
   }
+  async function cancel(o: Order) {
+    if (!confirm("Are you sure you want to cancel this order and restore stock?")) return;
+    await api.cancelOrder(o.id);
+    onChange();
+  }
 
   return (
     <Card className="p-5">
@@ -46,17 +51,41 @@ export function Orders({ bid, refreshKey, onChange }: { bid: string; refreshKey:
                 <td className="py-3"><Badge kind="status" value={o.status} /></td>
                 <td className="py-3 text-slate-400 text-xs">{timeAgo(o.created_at)}</td>
                 <td className="py-3 text-right">
-                  {o.status === "reserved" && (
-                    <button onClick={() => markPaid(o)} className="text-xs font-semibold bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700">
-                      Mark paid
-                    </button>
-                  )}
-                  {o.status === "paid" && (
-                    <button onClick={() => fulfill(o)} className="text-xs font-semibold bg-brand-700 text-white px-3 py-1.5 rounded-lg hover:bg-brand-800">
-                      Mark fulfilled
-                    </button>
-                  )}
-                  {(o.status === "fulfilled" || o.status === "cancelled") && <span className="text-xs text-slate-300">—</span>}
+                  <div className="flex items-center justify-end gap-2">
+                    {o.status === "reserved" && (
+                      <>
+                        {o.payment_link && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(o.payment_link!);
+                              alert("Payment link copied!");
+                            }}
+                            className="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg flex items-center gap-1"
+                            title="Copy payment link"
+                          >
+                            🔗 Link
+                          </button>
+                        )}
+                        <button onClick={() => markPaid(o)} className="text-xs font-semibold bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700">
+                          Mark paid
+                        </button>
+                        <button onClick={() => cancel(o)} className="text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg">
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                    {o.status === "paid" && (
+                      <>
+                        <button onClick={() => fulfill(o)} className="text-xs font-semibold bg-brand-700 text-white px-3 py-1.5 rounded-lg hover:bg-brand-800">
+                          Fulfill
+                        </button>
+                        <button onClick={() => cancel(o)} className="text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg">
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                    {(o.status === "fulfilled" || o.status === "cancelled") && <span className="text-xs text-slate-300">—</span>}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -83,6 +83,16 @@ export const api = {
   sendOtp: (phone: string) => post<{ status: string; mode?: string }>(`/auth/send-otp`, { phone }),
   verifyOtp: (phone: string, code: string) =>
     post<{ status: string; authenticated: boolean; access_token: string; token_type: string }>(`/auth/verify-otp`, { phone, code }),
+  // Product actions
+  createProduct: (bid: string, body: any) => post<Product>(`/products?business_id=${bid}`, body),
+  updateProduct: (pid: string, body: any) => fetch(`${API}/products/${pid}`, {
+    method: "PATCH", headers: headers(true), body: JSON.stringify(body),
+  }).then((r) => r.json()),
+  deleteProduct: (pid: string) => fetch(`${API}/products/${pid}`, {
+    method: "DELETE", headers: headers(),
+  }).then((r) => r.json()),
+  // Order actions
+  cancelOrder: (oid: string) => post<Order>(`/orders/${oid}/cancel`, {}),
 };
 
 export function openDashboardSocket(bid: string, onEvent: (e: any) => void, token = getAccessToken()): WebSocket {

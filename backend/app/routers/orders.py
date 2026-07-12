@@ -71,6 +71,16 @@ async def fulfill(order_id: str, db: Session = Depends(get_db), auth=Depends(req
     return order_svc.serialize(order)
 
 
+@router.post("/orders/{order_id}/cancel")
+async def cancel(order_id: str, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
+    order = db.get(Order, order_id)
+    if order is None:
+        raise HTTPException(404, "order not found")
+    order_svc.cancel_order(db, order)
+    await manager.broadcast(order.business_id, {"type": "order_update", "data": order_svc.serialize(order)})
+    return order_svc.serialize(order)
+
+
 @router.post("/payments/webhook")
 async def payment_webhook(request: Request, db: Session = Depends(get_db)):
     """Razorpay/mock payment confirmation. Verifies signature (razorpay mode),
