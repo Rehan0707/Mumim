@@ -18,7 +18,7 @@ from .db import Base, engine
 from .errors import register_exception_handlers
 from .logging_config import setup_logging
 from .middleware import RequestContextMiddleware
-from .routers import analytics, business, customers, health, media, nlu, orders, products, webhook, auth
+from .routers import analytics, auth, business, customers, health, media, nlu, orders, products, webhook
 from .routers import ws as ws_router
 
 setup_logging(settings.LOG_LEVEL)

@@ -152,3 +152,49 @@ def test_not_found_envelope(client):
 def test_openapi_and_docs(client):
     assert client.get("/openapi.json").status_code == 200
     assert client.get("/docs").status_code == 200
+
+
+def test_auth_otp_flow(client):
+    # Send OTP
+    r = client.post("/auth/send-otp", json={"phone": "9812345601"})
+    assert r.status_code == 200
+    assert r.json()["status"] == "sent"
+
+    # Verify using bypass code
+    v = client.post("/auth/verify-otp", json={"phone": "9812345601", "code": "888888"})
+    assert v.status_code == 200
+    assert v.json()["status"] == "verified"
+    assert v.json()["access_token"]
+
+
+def test_webhook_query_param_routing(client, db):
+    # Create second business
+    body = {
+        "name": "Second Shop",
+        "whatsapp_no": "+919999900000",
+        "category": "grocery",
+        "upi_id": "second@upi",
+    }
+    r = client.post("/businesses", json=body)
+    assert r.status_code == 201
+    biz2_id = r.json()["id"]
+
+    # Send a query to Second Shop using query parameters (for Twilio webhook sandbox form POSTs)
+    q = client.post(
+        f"/webhook/whatsapp?business_id={biz2_id}",
+        data={
+            "MessageSid": "SM_query_biz2",
+            "From": "whatsapp:+919000000009",
+            "To": "whatsapp:+14155238886",
+            "Body": "Maggi Noodles 70g available?",
+            "NumMedia": "0",
+        },
+    )
+    assert q.status_code == 200
+    assert "Maggi" in q.text
+
+    # Verify the message is scoped to Second Shop (biz2_id) in database
+    from app.models import Message
+    msg = db.query(Message).filter(Message.business_id == biz2_id).first()
+    assert msg is not None
+    assert "Maggi" in msg.text

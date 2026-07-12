@@ -17,7 +17,7 @@ const QUICK = [
   { label: "Last order?", payload: { type: "text", text: "my last order?" } },
 ];
 
-export function WhatsappSimulator() {
+export function WhatsappSimulator({ businessId }: { businessId?: string }) {
   const [customer, setCustomer] = useState({ from_no: "+919900555001", name: "Demo customer" });
   const [messages, setMessages] = useState<ChatMsg[]>([
     { dir: "out", text: "Hi! Munim is ready for the shop chat." },
@@ -46,7 +46,7 @@ export function WhatsappSimulator() {
     setBusy(true);
 
     try {
-      const res = await api.sendWhatsapp({ from_no: customer.from_no, type: "text", text: userMsg.text });
+      const res = await api.sendWhatsapp({ from_no: customer.from_no, type: "text", text: userMsg.text, business_id: businessId });
       const replyMsg: ChatMsg = { dir: "out", text: res.reply || "Sorry, I didn't understand.", cards: res.matches };
 
       // Simulate typing delay
@@ -71,7 +71,7 @@ export function WhatsappSimulator() {
     setBusy(true);
 
     try {
-      const res = await api.sendWhatsapp({ from_no: customer.from_no, ...p });
+      const res = await api.sendWhatsapp({ from_no: customer.from_no, ...p, business_id: businessId });
       const replyMsg: ChatMsg = { dir: "out", text: res.reply || "Done!", cards: res.matches };
       setTimeout(() => {
         setMessages((m) => [...m, replyMsg]);

@@ -62,7 +62,8 @@ async def _run(db: Session, business: Business, msg: InboundMessage, send_outbou
     if send_outbound:
         try:
             import asyncio
-            asyncio.create_task(whatsapp.send_message(msg.from_no, out["reply"]))
+            loop = asyncio.get_running_loop()
+            loop.run_in_executor(None, whatsapp.send_message, msg.from_no, out["reply"])
         except Exception as exc:
             logging.getLogger("munim.webhook").warning("outbound send failed: %s", exc)
     return out
@@ -117,7 +118,8 @@ async def inbound(request: Request, db: Session = Depends(get_db)):
             text=form.get("Body"),
             media_url=form.get("MediaUrl0"),
         )
-        business = _resolve_business(db, msg.business_id)
+        query_business_id = request.query_params.get("business_id")
+        business = _resolve_business(db, msg.business_id or query_business_id)
         # Twilio can send replies straight from the webhook response. That is more
         # reliable for the Sandbox than doing a second REST API call from localhost.
         out = await _run(db, business, msg, send_outbound=False)

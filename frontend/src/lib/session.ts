@@ -5,6 +5,7 @@ export type DemoSession = {
   phone?: string;
   role: "owner" | "manager";
   shopName: string;
+  businessId?: string;
   grantedAt: string;
 };
 

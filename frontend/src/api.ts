@@ -49,6 +49,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 export const api = {
   health: () => get<{ status: string; env: string; payment_mode: string; whatsapp_mode: string }>(`/health`),
   businesses: () => get<Business[]>(`/businesses`),
+  getBusiness: (bid: string) => get<Business>(`/businesses/${bid}`),
+  createBusiness: (body: any) => post<Business>(`/businesses`, body),
   products: (bid: string) => get<Product[]>(`/products?business_id=${bid}`),
   orders: (bid: string) => get<Order[]>(`/orders?business_id=${bid}`),
   customers: (bid: string) => get<Customer[]>(`/customers?business_id=${bid}`),
@@ -77,7 +79,7 @@ export const api = {
   bulkProducts: (bid: string, products: ScannedItem[]) =>
     post<{ created: number }>(`/products/bulk?business_id=${bid}`, { products }),
   // WhatsApp simulator -> webhook
-  sendWhatsapp: (payload: { from_no: string; type: string; text?: string; media_url?: string; name?: string }) =>
+  sendWhatsapp: (payload: { from_no: string; type: string; text?: string; media_url?: string; name?: string; business_id?: string }) =>
     post<{ reply: string; intent: string; lang: string; matches?: MatchCard[] }>(`/webhook/whatsapp`, payload),
   // Real OTP authentication
   sendOtp: (phone: string) => post<{ status: string; mode?: string }>(`/auth/send-otp`, { phone }),

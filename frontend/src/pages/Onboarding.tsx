@@ -1,13 +1,44 @@
 import { useEffect, useState } from "react";
+import { api } from "../api";
+import type { Business } from "../types";
+import { Button, Input } from "../components/ui";
 
 interface OnboardingProps {
-  onComplete: () => void;
+  phone: string;
+  onComplete: (business: Business) => void;
   onBack: () => void;
 }
 
-export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
+export default function Onboarding({ phone, onComplete, onBack }: OnboardingProps) {
   const [selected, setSelected] = useState<"qr" | "code" | "link">("qr");
   const [qrStatus, setQrStatus] = useState<"idle" | "scanning" | "success">("idle");
+  const [checking, setChecking] = useState(true);
+  
+  // Shop details form state
+  const [shopName, setShopName] = useState("");
+  const [category, setCategory] = useState("clothing");
+  const [upiId, setUpiId] = useState("");
+  const [langDefault, setLangDefault] = useState("hi");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Check if business already exists for this phone
+  useEffect(() => {
+    if (!phone) {
+      setChecking(false);
+      return;
+    }
+    api.businesses().then((list) => {
+      const found = list.find((b) => b.whatsapp_no === phone);
+      if (found) {
+        onComplete(found); // Skip onboarding if shop already exists!
+      } else {
+        setChecking(false);
+      }
+    }).catch(() => {
+      setChecking(false);
+    });
+  }, [phone, onComplete]);
 
   // Simulate QR Code scan connection when selecting the QR tab
   useEffect(() => {
@@ -21,6 +52,38 @@ export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
       setQrStatus("idle");
     }
   }, [selected]);
+
+  async function handleComplete() {
+    if (!shopName.trim()) {
+      setFormError("Please enter your Shop Name.");
+      return;
+    }
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      const biz = await api.createBusiness({
+        name: shopName.trim(),
+        whatsapp_no: phone,
+        category,
+        lang_default: langDefault,
+        upi_id: upiId.trim() || undefined,
+      });
+      onComplete(biz);
+    } catch (err: any) {
+      setFormError("A shop with this WhatsApp number already exists or connection failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm font-semibold text-on-surface-variant">Checking shop registration...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-margin-mobile md:px-margin-desktop py-12">
@@ -172,16 +235,82 @@ export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
           </div>
         )}
 
+        {/* Shop details form */}
+        <div className="w-full bg-surface rounded-2xl p-6 shadow-soft-depth space-y-4 border border-outline-variant/20">
+          <h3 className="font-semibold text-lg text-slate-800 border-b border-outline-variant pb-2 text-left">Shop Profile</h3>
+          
+          <div className="flex flex-col gap-2 text-left">
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Shop Name</label>
+            <Input
+              type="text"
+              required
+              value={shopName}
+              onChange={(e: any) => setShopName(e.target.value)}
+              placeholder="e.g. Ramesh Vastralaya"
+              className="w-full"
+              disabled={submitting}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 text-left">
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">UPI ID (for payment links)</label>
+            <Input
+              type="text"
+              value={upiId}
+              onChange={(e: any) => setUpiId(e.target.value)}
+              placeholder="e.g. ramesh@okhdfcbank"
+              className="w-full"
+              disabled={submitting}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-left">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Category</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="text-sm border border-outline-variant bg-surface rounded-xl px-3 py-[10px] outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20"
+                disabled={submitting}
+              >
+                <option value="clothing">Clothing / Boutique</option>
+                <option value="kirana">Kirana / Grocery</option>
+                <option value="pharmacy">Pharmacy</option>
+                <option value="other">Other Shop</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Reply Language</label>
+              <select
+                value={langDefault}
+                onChange={(e) => setLangDefault(e.target.value)}
+                className="text-sm border border-outline-variant bg-surface rounded-xl px-3 py-[10px] outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20"
+                disabled={submitting}
+              >
+                <option value="hi">Hindi / Hinglish</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+
+          {formError && (
+            <p className="text-sm text-rose-600 font-medium text-center bg-rose-50 border border-rose-100 rounded-lg py-2 px-3">{formError}</p>
+          )}
+        </div>
+
         <div className="w-full flex flex-col gap-4">
-          <button
-            onClick={onComplete}
-            className="w-full min-h-touch-target-min rounded-xl bg-primary-container text-on-primary-container font-body-lg text-body-lg font-semibold shadow-float-depth hover:scale-95 transition-all duration-150"
+          <Button
+            onClick={handleComplete}
+            className="w-full font-semibold"
+            disabled={submitting}
           >
-            Open Dashboard
-          </button>
+            {submitting ? "Creating Shop..." : "Open Dashboard"}
+          </Button>
           <button
             onClick={onBack}
             className="w-full min-h-touch-target-min rounded-xl border border-outline-variant text-on-surface-variant font-body-lg text-body-lg hover:bg-surface-container-low transition-colors"
+            disabled={submitting}
           >
             Back
           </button>

@@ -57,8 +57,16 @@ export default function App() {
   if (view === "onboarding") {
     return (
       <Onboarding
+        phone={session?.phone || ""}
         onBack={() => setView("auth")}
-        onComplete={() => {
+        onComplete={(business) => {
+          const nextSession: DemoSession = {
+            ...session!,
+            businessId: business.id,
+            shopName: business.name,
+          };
+          setSession(nextSession);
+          saveSession(nextSession);
           setView("dashboard");
         }}
       />
@@ -101,8 +109,14 @@ function Dashboard({ session, onSignOut }: DashboardProps) {
   const authenticated = Boolean(session?.authenticated);
 
   useEffect(() => {
-    api.businesses().then((list) => setBusiness(list[0])).catch(() => {});
-  }, []);
+    if (session?.businessId) {
+      api.getBusiness(session.businessId).then(setBusiness).catch(() => {
+        api.businesses().then((list) => setBusiness(list[0])).catch(() => {});
+      });
+    } else {
+      api.businesses().then((list) => setBusiness(list[0])).catch(() => {});
+    }
+  }, [session]);
 
   // Web socket connection with auto-reconnect logic (every 3 seconds on disconnect/error)
   useEffect(() => {
@@ -242,11 +256,11 @@ function Dashboard({ session, onSignOut }: DashboardProps) {
                 {page === "orders" && <Orders bid={business.id} refreshKey={refreshKey} onChange={refresh} />}
                 {page === "crm" && <CRM bid={business.id} refreshKey={refreshKey} />}
                 {page === "analytics" && <Analytics bid={business.id} refreshKey={refreshKey} />}
-                {page === "settings" && <Settings business={business} onSaved={() => api.businesses().then((l) => setBusiness(l[0]))} />}
+                {page === "settings" && <Settings business={business} onSaved={() => api.getBusiness(business.id).then(setBusiness)} />}
               </div>
 
               <div className="lg:sticky lg:top-24">
-                <WhatsappSimulator />
+                <WhatsappSimulator businessId={business.id} />
               </div>
             </div>
           )}

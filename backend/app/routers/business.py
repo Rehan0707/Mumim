@@ -65,7 +65,7 @@ def update_business(business_id: str, body: BusinessUpdate, db: Session = Depend
     b = db.get(Business, business_id)
     if b is None:
         raise HTTPException(404, "business not found")
-    for field, value in body.model_dump(exclude_none=True).items():
+    for field, value in body.model_dump(exclude_unset=True).items():
         setattr(b, field, value)
     db.commit()
     db.refresh(b)
