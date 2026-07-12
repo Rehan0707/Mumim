@@ -1,9 +1,13 @@
+import { useState } from "react";
+
 interface OnboardingProps {
   onComplete: () => void;
   onBack: () => void;
 }
 
 export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
+  const [selected, setSelected] = useState<"qr" | "code" | "link">("qr");
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-margin-mobile md:px-margin-desktop py-12">
       <div className="w-full max-w-[520px] flex flex-col items-center gap-section-gap">
@@ -19,36 +23,72 @@ export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
           </p>
         </div>
 
-        <div className="w-full bg-surface rounded-2xl p-card-padding shadow-soft-depth space-y-6">
-          <div className="flex items-center gap-4 min-h-[64px]">
+        <div className="w-full bg-surface rounded-2xl p-card-padding shadow-soft-depth space-y-4 border border-outline-variant/20">
+          <button
+            onClick={() => setSelected("qr")}
+            className={`w-full flex items-center gap-4 p-4 rounded-xl text-left border transition-all duration-200 ${
+              selected === "qr"
+                ? "border-primary bg-primary-container/5 ring-1 ring-primary"
+                : "border-transparent hover:bg-surface-container-low"
+            }`}
+          >
             <div className="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-primary-container">qr_code_scanner</span>
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-body-lg text-body-lg text-on-surface font-semibold">Scan QR Code</p>
               <p className="font-body-sm text-body-sm text-on-surface-variant">Open WhatsApp on your phone and scan the code</p>
             </div>
-          </div>
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors duration-200 ${
+              selected === "qr" ? "border-primary bg-primary" : "border-outline"
+            }`}>
+              {selected === "qr" && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+          </button>
 
-          <div className="flex items-center gap-4 min-h-[64px]">
+          <button
+            onClick={() => setSelected("code")}
+            className={`w-full flex items-center gap-4 p-4 rounded-xl text-left border transition-all duration-200 ${
+              selected === "code"
+                ? "border-primary bg-primary-container/5 ring-1 ring-primary"
+                : "border-transparent hover:bg-surface-container-low"
+            }`}
+          >
             <div className="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-primary-container">phone_iphone</span>
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-body-lg text-body-lg text-on-surface font-semibold">Send a Code</p>
               <p className="font-body-sm text-body-sm text-on-surface-variant">We'll send a verification code to your WhatsApp</p>
             </div>
-          </div>
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors duration-200 ${
+              selected === "code" ? "border-primary bg-primary" : "border-outline"
+            }`}>
+              {selected === "code" && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+          </button>
 
-          <div className="flex items-center gap-4 min-h-[64px]">
+          <button
+            onClick={() => setSelected("link")}
+            className={`w-full flex items-center gap-4 p-4 rounded-xl text-left border transition-all duration-200 ${
+              selected === "link"
+                ? "border-primary bg-primary-container/5 ring-1 ring-primary"
+                : "border-transparent hover:bg-surface-container-low"
+            }`}
+          >
             <div className="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-primary-container">link</span>
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-body-lg text-body-lg text-on-surface font-semibold">Link Device</p>
               <p className="font-body-sm text-body-sm text-on-surface-variant">Use WhatsApp's multi-device feature to link</p>
             </div>
-          </div>
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors duration-200 ${
+              selected === "link" ? "border-primary bg-primary" : "border-outline"
+            }`}>
+              {selected === "link" && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+          </button>
         </div>
 
         <div className="w-full flex flex-col gap-4">

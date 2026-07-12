@@ -70,6 +70,9 @@ export const api = {
   // WhatsApp simulator -> webhook
   sendWhatsapp: (payload: { from_no: string; type: string; text?: string; media_url?: string; name?: string }) =>
     post<{ reply: string; intent: string; lang: string; matches?: MatchCard[] }>(`/webhook/whatsapp`, payload),
+  // Real OTP authentication
+  sendOtp: (phone: string) => post<{ status: string; mode?: string }>(`/auth/send-otp`, { phone }),
+  verifyOtp: (phone: string, code: string) => post<{ status: string; authenticated: boolean }>(`/auth/verify-otp`, { phone, code }),
 };
 
 export function openDashboardSocket(bid: string, onEvent: (e: any) => void): WebSocket {

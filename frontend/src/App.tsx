@@ -15,34 +15,64 @@ import type { Business, WsEvent } from "./types";
 import { Card } from "./components/ui";
 import { clearSession, loadSession, saveSession, type DemoSession } from "./lib/session";
 
-type View = "landing" | "auth" | "onboarding" | "app";
+type View = "landing" | "auth" | "onboarding" | "dashboard";
 
 // Front-door router: Landing → Auth → Onboarding → the live Dashboard.
-// The dashboard is unchanged; it just mounts once we reach the "app" view.
 export default function App() {
-  const [view, setView] = useState<View>(() => (loadSession()?.authenticated ? "app" : "landing"));
+  const [session, setSession] = useState<DemoSession | null>(() => loadSession());
+  const [view, setView] = useState<View>(() => (loadSession()?.authenticated ? "dashboard" : "landing"));
 
-  if (view === "landing")
-    return <Landing onSignIn={() => setView("auth")} onDashboard={() => setView("app")} />;
-  if (view === "auth")
-    return <Auth onDone={() => setView("onboarding")} />;
-  if (view === "onboarding")
+  const authenticated = Boolean(session?.authenticated);
+
+  if (view === "landing") {
+    return (
+      <Landing
+        onSignIn={() => setView(authenticated ? "dashboard" : "auth")}
+        onDashboard={() => setView(authenticated ? "dashboard" : "auth")}
+      />
+    );
+  }
+
+  if (view === "auth") {
+    return (
+      <Auth
+        onDone={() => {
+          const nextSession: DemoSession = {
+            authenticated: true,
+            email: "owner@munim.ai",
+            shopName: "Ramesh Vastralaya",
+            role: "owner",
+            grantedAt: new Date().toISOString(),
+          };
+          setSession(nextSession);
+          saveSession(nextSession);
+          setView("onboarding");
+        }}
+      />
+    );
+  }
+
+  if (view === "onboarding") {
     return (
       <Onboarding
         onBack={() => setView("auth")}
         onComplete={() => {
-          saveSession({
-            authenticated: true,
-            email: "",
-            role: "owner",
-            shopName: "Ramesh Vastralaya",
-            grantedAt: new Date().toISOString(),
-          });
-          setView("app");
+          setView("dashboard");
         }}
       />
     );
-  return <Dashboard />;
+  }
+
+  return (
+    <Dashboard
+      session={session}
+      onSignOut={() => {
+        clearSession();
+        setSession(null);
+        setView("landing");
+      }}
+    />
+  );
 }
 
 const PAGE_TITLES: Record<PageKey, string> = {
@@ -54,27 +84,60 @@ const PAGE_TITLES: Record<PageKey, string> = {
   settings: "Settings",
 };
 
-function Dashboard() {
+interface DashboardProps {
+  session: DemoSession | null;
+  onSignOut: () => void;
+}
+
+function Dashboard({ session, onSignOut }: DashboardProps) {
   const [business, setBusiness] = useState<Business | undefined>();
   const [page, setPage] = useState<PageKey>("home");
   const [live, setLive] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [feed, setFeed] = useState<string[]>([]);
   const [highlight, setHighlight] = useState<string | undefined>();
-  const [session, setSession] = useState<DemoSession | null>(() => loadSession());
-  const [mode, setMode] = useState<"landing" | "auth" | "onboarding" | "dashboard">(loadSession() ? "dashboard" : "landing");
   const authenticated = Boolean(session?.authenticated);
 
   useEffect(() => {
     api.businesses().then((list) => setBusiness(list[0])).catch(() => {});
   }, []);
 
+  // Web socket connection with auto-reconnect logic (every 3 seconds on disconnect/error)
   useEffect(() => {
     if (!business || !authenticated) return;
-    const ws = openDashboardSocket(business.id, (e: WsEvent) => handleEvent(e));
-    ws.onopen = () => setLive(true);
-    ws.onclose = () => setLive(false);
-    return () => ws.close();
+    
+    const businessId = business.id;
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: any = null;
+    let isCleanup = false;
+
+    function connect() {
+      if (isCleanup) return;
+      ws = openDashboardSocket(businessId, (e: WsEvent) => handleEvent(e));
+      
+      ws.onopen = () => {
+        setLive(true);
+      };
+      
+      ws.onclose = () => {
+        setLive(false);
+        if (!isCleanup) {
+          reconnectTimeout = setTimeout(connect, 3000);
+        }
+      };
+      
+      ws.onerror = () => {
+        setLive(false);
+      };
+    }
+
+    connect();
+
+    return () => {
+      isCleanup = true;
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
   }, [business, authenticated]);
 
   function refresh() {
@@ -110,52 +173,11 @@ function Dashboard() {
     }
   }
 
-  function startDemoAuth() {
-    setMode(authenticated ? "dashboard" : "auth");
-  }
-
-  function completeAuth(next: { email: string; shopName: string; role: "owner" | "manager" }) {
-    const nextSession: DemoSession = {
-      authenticated: true,
-      email: next.email,
-      role: next.role,
-      shopName: next.shopName,
-      grantedAt: new Date().toISOString(),
-    };
-    setSession(nextSession);
-    saveSession(nextSession);
-    setMode("onboarding");
-  }
-
-  function completeOnboarding() {
-    setMode("dashboard");
-  }
-
   function signOut() {
-    clearSession();
-    setSession(null);
-    setMode("landing");
+    onSignOut();
     setPage("home");
     setFeed([]);
     setLive(false);
-  }
-
-  if (mode === "landing") {
-    return <Landing onSignIn={startDemoAuth} onDashboard={startDemoAuth} />;
-  }
-
-  if (mode === "auth") {
-    return (
-      <Auth
-        onDone={() => {
-          completeAuth({ email: "owner@munim.ai", shopName: "My Shop", role: "owner" });
-        }}
-      />
-    );
-  }
-
-  if (mode === "onboarding") {
-    return <Onboarding onComplete={completeOnboarding} onBack={() => setMode("auth")} />;
   }
 
   return (
@@ -179,7 +201,9 @@ function Dashboard() {
           {!business && (
             <div className="max-w-5xl mx-auto">
               <Card className="p-6 text-sm text-on-surface-variant">
-                Connecting to backend... make sure it is running on :8000.
+                {import.meta.env.VITE_API_URL 
+                  ? "Connecting to deployed backend... (If this is the first load, the server may take up to 1 minute to wake up)."
+                  : "Connecting to backend... make sure it is running on :8000."}
               </Card>
             </div>
           )}

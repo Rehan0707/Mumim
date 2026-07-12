@@ -55,7 +55,10 @@ export function WhatsappSimulator() {
         setBusy(false);
       }, 600 + Math.random() * 500);
     } catch {
-      setMessages((m) => [...m, { dir: "out", text: "⚠️ Backend not running. Start the server on :8000." }]);
+      const errMsg = import.meta.env.VITE_API_URL 
+        ? "⚠️ Backend connection failed. The server might be waking up or offline."
+        : "⚠️ Backend not running. Start the server on :8000.";
+      setMessages((m) => [...m, { dir: "out", text: errMsg }]);
       setBusy(false);
     }
   }
@@ -75,7 +78,10 @@ export function WhatsappSimulator() {
         setBusy(false);
       }, 600 + Math.random() * 500);
     } catch {
-      setMessages((m) => [...m, { dir: "out", text: "⚠️ Backend not running." }]);
+      const errMsg = import.meta.env.VITE_API_URL 
+        ? "⚠️ Backend connection failed."
+        : "⚠️ Backend not running.";
+      setMessages((m) => [...m, { dir: "out", text: errMsg }]);
       setBusy(false);
     }
   }

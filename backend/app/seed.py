@@ -59,10 +59,16 @@ CUSTOMERS = [
 def run() -> None:
     from .config import settings
     if not settings.DATABASE_URL.startswith("sqlite"):
-        from sqlalchemy import text
-        with engine.begin() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
-    Base.metadata.drop_all(bind=engine)
+        from sqlalchemy import text, inspect
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        if tables:
+            with engine.begin() as conn:
+                table_list = ", ".join(f'"{t}"' for t in tables)
+                conn.execute(text(f"DROP TABLE IF EXISTS {table_list} CASCADE;"))
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+    else:
+        Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     random.seed(42)

@@ -18,7 +18,7 @@ from .db import Base, engine
 from .errors import register_exception_handlers
 from .logging_config import setup_logging
 from .middleware import RequestContextMiddleware
-from .routers import analytics, business, customers, health, media, nlu, orders, products, webhook
+from .routers import analytics, business, customers, health, media, nlu, orders, products, webhook, auth
 from .routers import ws as ws_router
 
 setup_logging(settings.LOG_LEVEL)
@@ -94,5 +94,5 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
-for r in (health, webhook, nlu, media, products, orders, customers, analytics, business, ws_router):
+for r in (health, webhook, nlu, media, products, orders, customers, analytics, business, auth, ws_router):
     app.include_router(r.router)

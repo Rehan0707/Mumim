@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button, Card, Input } from "../components/ui";
+import { api } from "../api";
 
 function maskPhone(p: string) {
   if (p.length < 4) return p;
@@ -7,21 +8,42 @@ function maskPhone(p: string) {
 }
 
 export function Auth({ onDone }: { onDone: () => void }) {
-
   const [step, setStep] = useState<"login" | "verify" | "success">("login");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const stepIndex = step === "login" ? 0 : step === "verify" ? 1 : 2;
 
-  function handleSendOtp() {
+  async function handleSendOtp() {
     if (!phone.trim()) return;
-    setStep("verify");
+    setLoading(true);
+    setError(null);
+    try {
+      const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+      await api.sendOtp(formattedPhone);
+      setStep("verify");
+    } catch (err: any) {
+      setError("Failed to send verification code. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleVerify() {
+  async function handleVerify() {
     if (otp.length < 6) return;
-    setStep("success");
+    setLoading(true);
+    setError(null);
+    try {
+      const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+      await api.verifyOtp(formattedPhone, otp);
+      setStep("success");
+    } catch (err: any) {
+      setError("Invalid verification code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -62,21 +84,24 @@ export function Auth({ onDone }: { onDone: () => void }) {
                     onChange={(e: any) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     placeholder="9876543210"
                     className="border-none rounded-none flex-1"
+                    disabled={loading}
                   />
                 </div>
               </div>
 
-              <Button onClick={handleSendOtp} className="w-full">
-                Send OTP
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 w-full text-center font-medium">
+                  {error}
+                </div>
+              )}
+
+              <Button onClick={handleSendOtp} className="w-full" disabled={loading}>
+                {loading ? "Sending..." : "Send OTP"}
               </Button>
 
               <p className="font-body-sm text-body-sm text-on-surface-variant">
-                Demo: Any number works. Click 'Send OTP' to continue.
+                We will send a one-time verification code to this phone number.
               </p>
-
-              <button onClick={onDone} className="font-body-sm text-body-sm text-primary underline">
-                Sign in with demo account
-              </button>
             </div>
           )}
 
@@ -104,14 +129,25 @@ export function Auth({ onDone }: { onDone: () => void }) {
                   placeholder="000000"
                   maxLength={6}
                   className="text-center font-numeral-lg text-numeral-lg tracking-[0.5em]"
+                  disabled={loading}
                 />
               </div>
 
-              <Button onClick={handleVerify} className="w-full">
-                Verify &amp; Continue
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 w-full text-center font-medium">
+                  {error}
+                </div>
+              )}
+
+              <Button onClick={handleVerify} className="w-full" disabled={loading}>
+                {loading ? "Verifying..." : "Verify & Continue"}
               </Button>
 
-              <button onClick={() => { setStep("login"); setOtp(""); }} className="font-body-sm text-body-sm text-primary underline">
+              <button 
+                onClick={() => { setStep("login"); setOtp(""); setError(null); }} 
+                className="font-body-sm text-body-sm text-primary underline"
+                disabled={loading}
+              >
                 Back
               </button>
             </div>
@@ -137,30 +173,6 @@ export function Auth({ onDone }: { onDone: () => void }) {
               </Button>
             </div>
           )}
-        </Card>
-
-        <Card className="w-full bg-surface-container-low border border-outline-variant/30">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Demo Access</span>
-              <span className="rounded-full bg-primary-fixed/30 px-3 py-0.5 font-label-caps text-label-caps text-primary">
-                Quick Start
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="font-label-caps text-label-caps text-on-surface-variant block">Email</span>
-                <span className="font-body-sm text-body-sm text-on-surface font-medium">owner@munim.ai</span>
-              </div>
-              <div>
-                <span className="font-label-caps text-label-caps text-on-surface-variant block">Password</span>
-                <span className="font-body-sm text-body-sm text-on-surface font-medium">demo1234</span>
-              </div>
-            </div>
-            <Button onClick={onDone} className="w-full">
-              Quick Sign In
-            </Button>
-          </div>
         </Card>
       </div>
     </div>
