@@ -10,11 +10,13 @@ from __future__ import annotations
 
 from urllib.parse import parse_qs, urlparse
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..db import get_db
 from ..schemas import TranscribeRequest, VisionSearchRequest
+from ..security import require_owner_auth
 from ..services import nlu as nlu_svc
 from ..services import search as search_svc
 from ..services import vision as vision_svc
@@ -35,18 +37,22 @@ def _hint_from_url(url: str) -> str:
 
 
 @router.post("/transcribe", summary="Voice note → text (mock IndicWhisper)")
-def transcribe(body: TranscribeRequest):
+def transcribe(body: TranscribeRequest, auth=Depends(require_owner_auth)):
+    if not settings.allow_mock_ai:
+        raise HTTPException(503, "voice transcription engine unavailable")
     text = _hint_from_url(body.audio_url) or "don kilo tandul ani ek maggi"
     lang = body.lang or nlu_svc.detect_lang(text)
     return {"text": text, "lang": lang, "engine": "mock-indicwhisper"}
 
 
 @router.post("/vision-search", summary="Screenshot → closest catalog matches (FashionCLIP)")
-def vision_search(body: VisionSearchRequest, db: Session = Depends(get_db)):
+def vision_search(body: VisionSearchRequest, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     # Real FashionCLIP image search when the model + catalog embeddings are present…
     real = vision_svc.search_by_image_url(db, body.business_id, body.image_url, limit=body.limit)
     if real is not None:
         return {"engine": "fashionclip", "matches": real}
+    if not settings.allow_mock_ai:
+        raise HTTPException(503, "visual search engine unavailable")
     # …otherwise fall back to the text-hint stub (a `q=`/`text=` hint in the URL).
     query = _hint_from_url(body.image_url) or "shirt"
     entities = nlu_svc.extract_entities(query)

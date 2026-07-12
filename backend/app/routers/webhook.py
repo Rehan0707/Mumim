@@ -15,10 +15,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..db import get_db
 from ..integrations import whatsapp
 from ..models import Business
 from ..schemas import InboundMessage
+from ..security import require_owner_request
 from ..services import pipeline
 from ..ws import manager
 
@@ -89,6 +91,8 @@ async def inbound(request: Request, db: Session = Depends(get_db)):
     msg = None  # msg ko yahan initialize karna zaroori hai
 
     if "application/json" in content_type:
+        if settings.auth_required:
+            require_owner_request(request)
         payload = await request.json()
         msg = InboundMessage(**payload)
         business = _resolve_business(db, msg.business_id)
@@ -97,6 +101,13 @@ async def inbound(request: Request, db: Session = Depends(get_db)):
                 "matches": out.get("matches", [])}
     else:  # Twilio sandbox posts form-encoded
         form = await request.form()
+        if settings.WHATSAPP_MODE == "twilio" and settings.is_production:
+            form_dict = {k: str(v) for k, v in form.items()}
+            base_url = settings.PUBLIC_BASE_URL.rstrip("/") if settings.PUBLIC_BASE_URL else ""
+            signed_url = f"{base_url}{request.url.path}" if base_url else str(request.url)
+            signature = request.headers.get("X-Twilio-Signature", "")
+            if not whatsapp.verify_twilio_signature(signed_url, form_dict, signature):
+                raise HTTPException(401, "invalid Twilio webhook signature")
         sid = str(form.get("MessageSid") or form.get("SmsMessageSid") or "")
         if sid and sid in _TWILIO_CACHE:
             return _twiml(_TWILIO_CACHE[sid]["reply"])

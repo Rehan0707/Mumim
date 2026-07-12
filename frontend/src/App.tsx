@@ -36,10 +36,12 @@ export default function App() {
   if (view === "auth") {
     return (
       <Auth
-        onDone={() => {
+        onDone={({ phone, accessToken }) => {
           const nextSession: DemoSession = {
             authenticated: true,
+            accessToken,
             email: "owner@munim.ai",
+            phone,
             shopName: "Ramesh Vastralaya",
             role: "owner",
             grantedAt: new Date().toISOString(),
@@ -113,7 +115,7 @@ function Dashboard({ session, onSignOut }: DashboardProps) {
 
     function connect() {
       if (isCleanup) return;
-      ws = openDashboardSocket(businessId, (e: WsEvent) => handleEvent(e));
+      ws = openDashboardSocket(businessId, (e: WsEvent) => handleEvent(e), session?.accessToken);
       
       ws.onopen = () => {
         setLive(true);
@@ -138,7 +140,7 @@ function Dashboard({ session, onSignOut }: DashboardProps) {
       if (ws) ws.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
-  }, [business, authenticated]);
+  }, [business, authenticated, session?.accessToken]);
 
   function refresh() {
     setRefreshKey((k) => k + 1);

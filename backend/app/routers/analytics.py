@@ -13,13 +13,14 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Customer, Order, OrderItem, Product
+from ..security import require_owner_auth
 from ..services.reply import LOW_STOCK_THRESHOLD
 
 router = APIRouter(tags=["analytics"])
 
 
 @router.get("/analytics/summary")
-def summary(business_id: str, db: Session = Depends(get_db)):
+def summary(business_id: str, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     data = _build_analytics(db, business_id)
     return {
         "kpis": data["kpis"],
@@ -32,7 +33,7 @@ def summary(business_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/analytics/daily-summary")
-def daily_summary(business_id: str, db: Session = Depends(get_db)):
+def daily_summary(business_id: str, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     """Owner WhatsApp daily summary (PRD F10).
 
     This returns the exact message the scheduler/Twilio sender can push at night.
@@ -61,7 +62,7 @@ def daily_summary(business_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/recommendations")
-def recommendations(business_id: str, product_id: str | None = None, db: Session = Depends(get_db)):
+def recommendations(business_id: str, product_id: str | None = None, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     """Product recommendations (PRD F12).
 
     Uses order co-occurrence when a product is supplied, then falls back to

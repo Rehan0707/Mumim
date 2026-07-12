@@ -11,6 +11,8 @@ TWILIO_WHATSAPP_FROM to go live via the Twilio Sandbox.
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
 import json
 import logging
 import urllib.parse
@@ -26,6 +28,8 @@ TWILIO_API = "https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
 def send_message(to: str, body: str) -> dict:
     """Send a WhatsApp message to `to`. Returns a receipt dict."""
     if settings.WHATSAPP_MODE != "twilio":
+        if settings.is_production and not settings.allow_production_mocks:
+            raise RuntimeError("mock WhatsApp sender is disabled in production")
         log.info("[mock-whatsapp] -> %s: %s", to, (body or "").replace("\n", " ⏎ "))
         return {"mode": "mock", "to": to, "status": "logged"}
     return _send_twilio(to, body)
@@ -51,3 +55,16 @@ def _send_twilio(to: str, body: str) -> dict:
         payload = json.loads(resp.read())
     log.info("[twilio] sent sid=%s to=%s", payload.get("sid"), to)
     return {"mode": "twilio", "to": to, "status": "sent", "sid": payload.get("sid")}
+
+
+def verify_twilio_signature(url: str, form: dict, signature: str) -> bool:
+    """Validate Twilio's X-Twilio-Signature header for inbound webhooks."""
+    token = settings.TWILIO_AUTH_TOKEN
+    if not token or not signature:
+        return False
+    pieces = [url]
+    for key in sorted(form):
+        pieces.append(f"{key}{form[key]}")
+    digest = hmac.new(token.encode("utf-8"), "".join(pieces).encode("utf-8"), hashlib.sha1).digest()
+    expected = base64.b64encode(digest).decode("ascii")
+    return hmac.compare_digest(expected, signature)

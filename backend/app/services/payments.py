@@ -20,6 +20,10 @@ from ..models import Business, Order
 log = logging.getLogger("munim.payments")
 
 
+class PaymentProviderError(Exception):
+    pass
+
+
 def _upi_link(business: Business, order: Order) -> str:
     """UPI intent deep link — works on any UPI app, no keys required."""
     amount = float(order.total)
@@ -40,8 +44,12 @@ def generate_payment_link(business: Business, order: Order) -> str:
                 customer_contact=order.customer.whatsapp_no if order.customer else "",
             )
         except Exception as exc:
+            if settings.is_production and not settings.allow_production_mocks:
+                raise PaymentProviderError("Razorpay payment link failed") from exc
             log.warning("razorpay payment link failed (%s) — falling back to UPI link", exc)
             return _upi_link(business, order)
+    if settings.PAYMENT_MODE == "mock" and settings.is_production and not settings.allow_production_mocks:
+        raise PaymentProviderError("mock payments are disabled in production")
     return _upi_link(business, order)
 
 
@@ -49,4 +57,7 @@ def verify_webhook_signature(raw_body: bytes, signature: str) -> bool:
     """Verify a payment webhook. Mock mode accepts everything (no signing)."""
     if settings.PAYMENT_MODE == "razorpay":
         return razorpay_client.verify_webhook_signature(raw_body, signature)
+    if settings.is_production and not settings.allow_production_mocks:
+        log.warning("mock payment webhook rejected in production")
+        return False
     return True

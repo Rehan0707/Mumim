@@ -1,4 +1,5 @@
 import type { Analytics, Business, Customer, DailySummary, Order, Product, Recommendation } from "./types";
+import { getAccessToken } from "./lib/session";
 
 // Vite dev proxy maps /api -> backend :8000 and /ws -> backend websocket.
 const API = import.meta.env.VITE_API_URL || "/api";
@@ -21,8 +22,16 @@ export interface MatchCard {
   score: number;
 }
 
+function headers(json = false): HeadersInit {
+  const out: Record<string, string> = {};
+  if (json) out["Content-Type"] = "application/json";
+  const token = getAccessToken();
+  if (token) out.Authorization = `Bearer ${token}`;
+  return out;
+}
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}${path}`);
+  const res = await fetch(`${API}${path}`, { headers: headers() });
   if (!res.ok) throw new Error(`${res.status} ${path}`);
   return res.json();
 }
@@ -30,7 +39,7 @@ async function get<T>(path: string): Promise<T> {
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: headers(true),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`${res.status} ${path}`);
@@ -52,7 +61,7 @@ export const api = {
       `/recommendations?business_id=${bid}${productId ? `&product_id=${productId}` : ""}`
     ),
   updateBusiness: (bid: string, body: Partial<Business>) => fetch(`${API}/businesses/${bid}`, {
-    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    method: "PATCH", headers: headers(true), body: JSON.stringify(body),
   }).then((r) => r.json()),
   fulfill: (oid: string) => post<Order>(`/orders/${oid}/fulfill`, {}),
   markPaid: (oid: string) => post<Order>(`/payments/webhook`, { order_id: oid, payment_id: "dashboard" }),
@@ -60,7 +69,7 @@ export const api = {
   scanReceipt: (bid: string, file: File) => {
     const fd = new FormData();
     fd.append("file", file);
-    return fetch(`${API}/products/scan?business_id=${bid}`, { method: "POST", body: fd }).then((r) => {
+    return fetch(`${API}/products/scan?business_id=${bid}`, { method: "POST", headers: headers(), body: fd }).then((r) => {
       if (!r.ok) throw new Error(`${r.status}`);
       return r.json() as Promise<{ count: number; products: ScannedItem[] }>;
     });
@@ -72,13 +81,17 @@ export const api = {
     post<{ reply: string; intent: string; lang: string; matches?: MatchCard[] }>(`/webhook/whatsapp`, payload),
   // Real OTP authentication
   sendOtp: (phone: string) => post<{ status: string; mode?: string }>(`/auth/send-otp`, { phone }),
-  verifyOtp: (phone: string, code: string) => post<{ status: string; authenticated: boolean }>(`/auth/verify-otp`, { phone, code }),
+  verifyOtp: (phone: string, code: string) =>
+    post<{ status: string; authenticated: boolean; access_token: string; token_type: string }>(`/auth/verify-otp`, { phone, code }),
 };
 
-export function openDashboardSocket(bid: string, onEvent: (e: any) => void): WebSocket {
+export function openDashboardSocket(bid: string, onEvent: (e: any) => void, token = getAccessToken()): WebSocket {
   let wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/dashboard?business_id=${bid}`;
   if (import.meta.env.VITE_WS_URL) {
     wsUrl = `${import.meta.env.VITE_WS_URL}?business_id=${bid}`;
+  }
+  if (token) {
+    wsUrl = `${wsUrl}&token=${encodeURIComponent(token)}`;
   }
   const ws = new WebSocket(wsUrl);
   ws.onmessage = (msg) => {

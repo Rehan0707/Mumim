@@ -18,6 +18,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..models import Business, Message, Order
 from . import crm, nlu, orders, payments, reply, search, vision
 
@@ -26,10 +27,7 @@ _PENDING: Dict[str, dict] = {}
 
 
 def _key(business_id: str, whatsapp_no: str) -> str:
-    generated_key = f"{business_id}:{whatsapp_no}"
-    # Yahan print laga do
-    print(f"DEBUG: Generated Key for _PENDING -> {generated_key}")
-    return generated_key
+    return f"{business_id}:{whatsapp_no}"
 
 def _log_message(db: Session, business_id: str, customer_id: Optional[str], direction: str,
                  input_type: str, text: str, intent: Optional[str] = None, lang: Optional[str] = None,
@@ -55,6 +53,17 @@ def handle_message(
     if input_type == "image":
         return _handle_visual(db, business, customer, media_url, events)
     if input_type == "voice":
+        if not text and not settings.allow_mock_ai:
+            lang = business.lang_default or "hi"
+            reply_text = "Voice orders are temporarily unavailable. Please send the order as text."
+            _log_message(db, business.id, customer.id, "in", input_type, "[voice note]", "UNKNOWN", lang, media_url)
+            _log_message(db, business.id, customer.id, "out", "text", reply_text, "UNKNOWN", lang)
+            events.append({"type": "new_message", "data": {
+                "customer_no": from_no, "direction": "in", "text": "[voice note]", "intent": "UNKNOWN"}})
+            events.append({"type": "new_message", "data": {
+                "customer_no": from_no, "direction": "out", "text": reply_text}})
+            return {"reply": reply_text, "intent": "UNKNOWN", "lang": lang,
+                    "events": events, "customer_id": customer.id, "matches": []}
         text = text or "[voice note]"  # real IndicWhisper transcript swaps in here
 
     text = (text or "").strip()
@@ -167,6 +176,13 @@ def _handle_visual(db, business, customer, media_url, events) -> str:
     if media_url:
         matches = vision.search_by_image_url(db, business.id, media_url, limit=3)
     if matches is None:
+        if not settings.allow_mock_ai:
+            reply_text = "Visual search is temporarily unavailable. Please describe the item in text."
+            _log_message(db, business.id, customer.id, "out", "text", reply_text, "QUERY", lang)
+            events.append({"type": "new_message", "data": {
+                "customer_no": customer.whatsapp_no, "direction": "out", "text": reply_text}})
+            return {"reply": reply_text, "intent": "QUERY", "lang": lang,
+                    "events": events, "customer_id": customer.id, "matches": []}
         matches = search.semantic_search(db, business.id, query or "shirt", {}, limit=3)
     if matches:
         key = _key(business.id, customer.whatsapp_no)

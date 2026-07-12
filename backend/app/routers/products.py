@@ -11,6 +11,7 @@ from .. import embeddings
 from ..db import get_db
 from ..models import Product
 from ..schemas import ProductIn, SemanticSearchRequest
+from ..security import require_owner_auth
 from ..services import receipt, search
 
 router = APIRouter(tags=["products"])
@@ -41,7 +42,7 @@ class BulkProductsIn(BaseModel):
 
 
 @router.get("/products")
-def list_products(business_id: str, q: str = None, db: Session = Depends(get_db)):
+def list_products(business_id: str, q: str = None, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     # Agar user ne kuch search kiya hai, toh seedha AI Semantic Search chalega
     if q:
         # Hum seedha tumhare teammate ka banaya hua search function call kar rahe hain
@@ -53,7 +54,7 @@ def list_products(business_id: str, q: str = None, db: Session = Depends(get_db)
     return [_serialize(p) for p in products]
 
 @router.post("/products", status_code=201)
-def create_product(business_id: str, body: ProductIn, db: Session = Depends(get_db)):
+def create_product(business_id: str, body: ProductIn, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     product = _create_one(db, business_id, body)
     db.commit()
     db.refresh(product)
@@ -61,7 +62,7 @@ def create_product(business_id: str, body: ProductIn, db: Session = Depends(get_
 
 
 @router.post("/products/bulk", status_code=201)
-def create_products_bulk(business_id: str, body: BulkProductsIn, db: Session = Depends(get_db)):
+def create_products_bulk(business_id: str, body: BulkProductsIn, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     """Add many products at once (used after a receipt scan is reviewed)."""
     created = [_create_one(db, business_id, p) for p in body.products]
     db.commit()
@@ -71,7 +72,7 @@ def create_products_bulk(business_id: str, body: BulkProductsIn, db: Session = D
 
 
 @router.post("/products/scan")
-async def scan_receipt(business_id: str, file: UploadFile = File(...)):
+async def scan_receipt(business_id: str, file: UploadFile = File(...), auth=Depends(require_owner_auth)):
     """OCR a bill/receipt photo → product candidates for the owner to review (PRD F11).
 
     Returns {name, price, qty} rows; nothing is saved until the owner confirms via
@@ -80,7 +81,14 @@ async def scan_receipt(business_id: str, file: UploadFile = File(...)):
     import logging
     logger = logging.getLogger("munim.products")
     
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "empty file")
+
     if not receipt.is_available():
+        from ..config import settings
+        if not settings.allow_mock_ai:
+            raise HTTPException(503, "OCR engine unavailable")
         logger.warning("OCR engine not installed. Falling back to mock receipt extraction.")
         mock_items = [
             {"name": "Mens Denim Jacket Blue", "price": 1899.0, "qty": 5, "stock_qty": 5},
@@ -90,15 +98,12 @@ async def scan_receipt(business_id: str, file: UploadFile = File(...)):
         ]
         return {"count": len(mock_items), "products": mock_items}
         
-    data = await file.read()
-    if not data:
-        raise HTTPException(400, "empty file")
     items = receipt.extract_products(data)
     return {"count": len(items), "products": items}
 
 
 @router.patch("/products/{product_id}")
-def update_product(product_id: str, body: ProductIn, db: Session = Depends(get_db)):
+def update_product(product_id: str, body: ProductIn, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     product = db.get(Product, product_id)
     if product is None:
         raise HTTPException(404, "product not found")
@@ -113,5 +118,5 @@ def update_product(product_id: str, body: ProductIn, db: Session = Depends(get_d
 
 
 @router.post("/search/semantic")
-def semantic(body: SemanticSearchRequest, db: Session = Depends(get_db)):
+def semantic(body: SemanticSearchRequest, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     return {"matches": search.semantic_search(db, body.business_id, body.query, limit=5)}

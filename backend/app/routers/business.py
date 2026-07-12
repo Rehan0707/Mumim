@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Business
+from ..security import require_owner_auth
 
 router = APIRouter(tags=["business"])
 
@@ -35,12 +36,12 @@ def _serialize(b: Business) -> dict:
 
 
 @router.get("/businesses")
-def list_businesses(db: Session = Depends(get_db)):
+def list_businesses(db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     return [_serialize(b) for b in db.query(Business).all()]
 
 
 @router.post("/businesses", status_code=201)
-def create_business(body: BusinessCreate, db: Session = Depends(get_db)):
+def create_business(body: BusinessCreate, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     """Create a shop (owner onboarding). whatsapp_no must be unique."""
     if db.query(Business).filter(Business.whatsapp_no == body.whatsapp_no).first():
         raise HTTPException(409, "a business with this whatsapp_no already exists")
@@ -52,7 +53,7 @@ def create_business(body: BusinessCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/businesses/{business_id}")
-def get_business(business_id: str, db: Session = Depends(get_db)):
+def get_business(business_id: str, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     b = db.get(Business, business_id)
     if b is None:
         raise HTTPException(404, "business not found")
@@ -60,7 +61,7 @@ def get_business(business_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/businesses/{business_id}")
-def update_business(business_id: str, body: BusinessUpdate, db: Session = Depends(get_db)):
+def update_business(business_id: str, body: BusinessUpdate, db: Session = Depends(get_db), auth=Depends(require_owner_auth)):
     b = db.get(Business, business_id)
     if b is None:
         raise HTTPException(404, "business not found")

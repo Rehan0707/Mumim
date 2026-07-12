@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .services.orders import OrderError, OutOfStock
+from .services.payments import PaymentProviderError
 
 log = logging.getLogger("munim.errors")
 
@@ -44,6 +45,10 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(OrderError)
     async def _order_error(request: Request, exc: OrderError):
         return _envelope(400, "order_error", str(exc))
+
+    @app.exception_handler(PaymentProviderError)
+    async def _payment_error(request: Request, exc: PaymentProviderError):
+        return _envelope(502, "payment_provider_error", str(exc))
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception):

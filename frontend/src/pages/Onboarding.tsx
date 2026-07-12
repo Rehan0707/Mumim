@@ -16,10 +16,10 @@ export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
             <span className="material-symbols-outlined text-4xl text-on-primary-container">whatsapp</span>
           </div>
           <h1 className="font-display text-display-lg-mobile md:text-display-lg text-primary mb-4">
-            Connect your WhatsApp
+            Prepare WhatsApp setup
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant max-w-sm mx-auto">
-            Link your shop's WhatsApp number to start receiving orders, answering queries, and tracking inventory — all through chat.
+            Choose the setup path for your shop. Live customer messages require a configured WhatsApp provider.
           </p>
         </div>
 
@@ -37,7 +37,7 @@ export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
             </div>
             <div className="flex-1">
               <p className="font-body-lg text-body-lg text-on-surface font-semibold">Scan QR Code</p>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">Open WhatsApp on your phone and scan the code</p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">Use a provider QR flow when enabled for your account</p>
             </div>
             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors duration-200 ${
               selected === "qr" ? "border-primary bg-primary" : "border-outline"
@@ -59,7 +59,7 @@ export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
             </div>
             <div className="flex-1">
               <p className="font-body-lg text-body-lg text-on-surface font-semibold">Send a Code</p>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">We'll send a verification code to your WhatsApp</p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">Verify the shop number before accepting live messages</p>
             </div>
             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors duration-200 ${
               selected === "code" ? "border-primary bg-primary" : "border-outline"
@@ -81,7 +81,7 @@ export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
             </div>
             <div className="flex-1">
               <p className="font-body-lg text-body-lg text-on-surface font-semibold">Link Device</p>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">Use WhatsApp's multi-device feature to link</p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">Connect through Twilio or Meta before launch</p>
             </div>
             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors duration-200 ${
               selected === "link" ? "border-primary bg-primary" : "border-outline"
@@ -96,7 +96,7 @@ export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
             onClick={onComplete}
             className="w-full min-h-touch-target-min rounded-xl bg-primary-container text-on-primary-container font-body-lg text-body-lg font-semibold shadow-float-depth hover:scale-95 transition-all duration-150"
           >
-            Continue Setup
+            Open Dashboard
           </button>
           <button
             onClick={onBack}
@@ -107,7 +107,7 @@ export default function Onboarding({ onComplete, onBack }: OnboardingProps) {
         </div>
 
         <p className="font-body-sm text-body-sm text-on-surface-variant text-center">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
+          By continuing, you agree to our <a href="/terms.html" className="text-primary underline">Terms of Service</a> and <a href="/privacy.html" className="text-primary underline">Privacy Policy</a>.
         </p>
       </div>
     </div>

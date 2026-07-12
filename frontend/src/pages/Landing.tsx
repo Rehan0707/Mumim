@@ -461,10 +461,10 @@ export default function Landing({ onSignIn, onDashboard }: { onSignIn: () => voi
               </p>
             </div>
             <div className="flex flex-wrap gap-6">
-              <a href="#" className="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors">Privacy Policy</a>
-              <a href="#" className="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors">Terms of Service</a>
-              <a href="#" className="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors">Contact Us</a>
-              <a href="#" className="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors">Documentation</a>
+              <a href="/privacy.html" className="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors">Privacy Policy</a>
+              <a href="/terms.html" className="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors">Terms of Service</a>
+              <a href="/contact.html" className="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors">Contact Us</a>
+              <a href="https://github.com/Rehan0707/Mumim#readme" className="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors">Documentation</a>
             </div>
           </div>
         </footer>
