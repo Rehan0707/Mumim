@@ -42,7 +42,11 @@ def semantic_search(
     ]
 
     scored.sort(key=lambda x: x[0], reverse=True)
-    return [_to_match(p, score) for score, p in scored[:limit] if score >=   0]
+    # Hashing matches have lower raw cosine scores, but are exactly 0.0 if completely unrelated.
+    # We require a small positive threshold (0.05) to filter out 0.0 unrelated matches.
+    # For real transformer models, we require a standard threshold of 0.35.
+    threshold = 0.05 if embeddings.is_using_hashing() else 0.35
+    return [_to_match(p, score) for score, p in scored[:limit] if score >= threshold]
 
 
 def _product_score(p: Product, q_vec: list[float], keywords: list[str], want_size: str | None) -> float:

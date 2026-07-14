@@ -71,6 +71,10 @@ def _load_encoder():
         return None
 
 
+def is_using_hashing() -> bool:
+    return _load_encoder() is None
+
+
 def embed_text(text: str) -> List[float]:
     """Embed text → normalized 384-d vector. Real multilingual model if available, else hashing."""
     if not text:
