@@ -8,6 +8,7 @@ import { Orders } from "./pages/Orders";
 import { CRM } from "./pages/CRM";
 import { Analytics } from "./pages/Analytics";
 import { Settings } from "./pages/Settings";
+import { Invoice } from "./pages/Invoice";
 import Landing from "./pages/Landing";
 import { Auth } from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -89,6 +90,7 @@ const PAGE_TITLES: Record<PageKey, string> = {
   home: "Overview",
   inventory: "Inventory",
   orders: "Orders",
+  invoice: "Invoices",
   crm: "Customers",
   analytics: "Analytics",
   settings: "Settings",
@@ -254,6 +256,7 @@ function Dashboard({ session, onSignOut }: DashboardProps) {
                 {page === "home" && <Home bid={business.id} refreshKey={refreshKey} feed={feed} />}
                 {page === "inventory" && <Inventory bid={business.id} refreshKey={refreshKey} highlight={highlight} />}
                 {page === "orders" && <Orders bid={business.id} refreshKey={refreshKey} onChange={refresh} />}
+                {page === "invoice" && <Invoice bid={business.id} />}
                 {page === "crm" && <CRM bid={business.id} refreshKey={refreshKey} />}
                 {page === "analytics" && <Analytics bid={business.id} refreshKey={refreshKey} />}
                 {page === "settings" && <Settings business={business} onSaved={() => api.getBusiness(business.id).then(setBusiness)} />}
