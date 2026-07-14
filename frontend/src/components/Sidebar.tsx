@@ -1,11 +1,12 @@
 import { useState } from "react";
 
-export type PageKey = "home" | "orders" | "inventory" | "analytics" | "crm" | "settings";
+export type PageKey = "home" | "orders" | "inventory" | "invoice" | "analytics" | "crm" | "settings";
 
 const NAV_ITEMS: { key: PageKey; label: string; icon: string }[] = [
   { key: "home", label: "Home", icon: "home" },
   { key: "orders", label: "Orders", icon: "receipt_long" },
   { key: "inventory", label: "Inventory", icon: "inventory_2" },
+  { key: "invoice", label: "Invoice", icon: "description" },
   { key: "analytics", label: "Analytics", icon: "leaderboard" },
   { key: "crm", label: "CRM", icon: "group" },
   { key: "settings", label: "Settings", icon: "settings" },
