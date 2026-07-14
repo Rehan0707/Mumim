@@ -97,7 +97,10 @@ export const api = {
   cancelOrder: (oid: string) => post<Order>(`/orders/${oid}/cancel`, {}),
 };
 
-export function openDashboardSocket(bid: string, onEvent: (e: any) => void, token = getAccessToken()): WebSocket {
+export function openDashboardSocket(bid: string, onEvent: (e: any) => void, token = getAccessToken()): WebSocket | null {
+  if (import.meta.env.VITE_WS_URL === "disabled") {
+    return null;
+  }
   let wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/dashboard?business_id=${bid}`;
   if (import.meta.env.VITE_WS_URL) {
     wsUrl = `${import.meta.env.VITE_WS_URL}?business_id=${bid}`;

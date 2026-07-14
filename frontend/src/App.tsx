@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { api, openDashboardSocket } from "./api";
 import Sidebar, { type PageKey } from "./components/Sidebar";
 import { WhatsappSimulator } from "./components/WhatsappSimulator";
@@ -6,7 +6,6 @@ import { Home } from "./pages/Home";
 import { Inventory } from "./pages/Inventory";
 import { Orders } from "./pages/Orders";
 import { CRM } from "./pages/CRM";
-import { Analytics } from "./pages/Analytics";
 import { Settings } from "./pages/Settings";
 import Landing from "./pages/Landing";
 import { Auth } from "./pages/Auth";
@@ -14,6 +13,11 @@ import Onboarding from "./pages/Onboarding";
 import type { Business, WsEvent } from "./types";
 import { Card } from "./components/ui";
 import { clearSession, loadSession, saveSession, type DemoSession } from "./lib/session";
+
+const Analytics = lazy(async () => {
+  const module = await import("./pages/Analytics");
+  return { default: module.Analytics };
+});
 
 type View = "landing" | "auth" | "onboarding" | "dashboard";
 
@@ -81,6 +85,7 @@ export default function App() {
         setSession(null);
         setView("landing");
       }}
+      onLanding={() => setView("landing")}
     />
   );
 }
@@ -97,12 +102,14 @@ const PAGE_TITLES: Record<PageKey, string> = {
 interface DashboardProps {
   session: DemoSession | null;
   onSignOut: () => void;
+  onLanding: () => void;
 }
 
-function Dashboard({ session, onSignOut }: DashboardProps) {
+function Dashboard({ session, onSignOut, onLanding }: DashboardProps) {
   const [business, setBusiness] = useState<Business | undefined>();
   const [page, setPage] = useState<PageKey>("home");
   const [live, setLive] = useState(false);
+  const [polling, setPolling] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [feed, setFeed] = useState<string[]>([]);
   const [highlight, setHighlight] = useState<string | undefined>();
@@ -118,20 +125,33 @@ function Dashboard({ session, onSignOut }: DashboardProps) {
     }
   }, [session]);
 
-  // Web socket connection with auto-reconnect logic (every 3 seconds on disconnect/error)
+  // Websocket when available; polling fallback for serverless production deploys.
   useEffect(() => {
     if (!business || !authenticated) return;
     
     const businessId = business.id;
     let ws: WebSocket | null = null;
     let reconnectTimeout: any = null;
+    let pollInterval: any = null;
     let isCleanup = false;
+
+    function startPolling() {
+      setPolling(true);
+      setLive(false);
+      refresh();
+      pollInterval = setInterval(refresh, 5000);
+    }
 
     function connect() {
       if (isCleanup) return;
       ws = openDashboardSocket(businessId, (e: WsEvent) => handleEvent(e), session?.accessToken);
+      if (!ws) {
+        startPolling();
+        return;
+      }
       
       ws.onopen = () => {
+        setPolling(false);
         setLive(true);
       };
       
@@ -153,6 +173,7 @@ function Dashboard({ session, onSignOut }: DashboardProps) {
       isCleanup = true;
       if (ws) ws.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [business, authenticated, session?.accessToken]);
 
@@ -198,11 +219,11 @@ function Dashboard({ session, onSignOut }: DashboardProps) {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar page={page} onNav={(p: string) => setPage(p as PageKey)} business={business ?? null} live={live} onLogout={signOut} />
+      <Sidebar page={page} onNav={(p: string) => setPage(p as PageKey)} business={business ?? null} live={live} onLogout={signOut} onLanding={onLanding} />
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden md:ml-64">
         <header className="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-touch-target-min bg-surface shadow-sm z-10 md:hidden">
-          <h1 className="font-display text-display-lg-mobile font-bold text-primary">Munim.ai</h1>
+          <h1 onClick={onLanding} className="font-display text-display-lg-mobile font-bold text-primary cursor-pointer hover:opacity-80 transition-opacity">Munim.ai</h1>
           <div className="flex gap-4">
             <button className="text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-all">
               <span className="material-symbols-outlined">notifications</span>
@@ -246,16 +267,20 @@ function Dashboard({ session, onSignOut }: DashboardProps) {
                         <span className={`absolute inline-flex h-full w-full animate-pulse-ring rounded-full ${live ? "bg-secondary-fixed" : "bg-outline"} opacity-75`} />
                         <span className={`relative inline-flex h-2 w-2 rounded-full ${live ? "bg-secondary-fixed" : "bg-outline"}`} />
                       </span>
-                      {live ? "Live" : "Connecting"}
+                      {live ? "Live" : polling ? "Polling" : "Connecting"}
                     </span>
                   </div>
                 </div>
 
                 {page === "home" && <Home bid={business.id} refreshKey={refreshKey} feed={feed} />}
                 {page === "inventory" && <Inventory bid={business.id} refreshKey={refreshKey} highlight={highlight} />}
-                {page === "orders" && <Orders bid={business.id} refreshKey={refreshKey} onChange={refresh} />}
+                {page === "orders" && <Orders bid={business.id} business={business} refreshKey={refreshKey} onChange={refresh} />}
                 {page === "crm" && <CRM bid={business.id} refreshKey={refreshKey} />}
-                {page === "analytics" && <Analytics bid={business.id} refreshKey={refreshKey} />}
+                {page === "analytics" && (
+                  <Suspense fallback={<Card className="p-8 text-center text-on-surface-variant">Loading analytics...</Card>}>
+                    <Analytics bid={business.id} refreshKey={refreshKey} />
+                  </Suspense>
+                )}
                 {page === "settings" && <Settings business={business} onSaved={() => api.getBusiness(business.id).then(setBusiness)} />}
               </div>
 

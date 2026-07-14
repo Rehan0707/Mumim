@@ -5,14 +5,16 @@ import hashlib
 import hmac
 import logging
 import secrets
-import time
-from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from ..config import settings
+from ..db import get_db
 from ..integrations import whatsapp
+from ..models import OtpChallenge
 from ..security import create_access_token
 
 log = logging.getLogger("munim.auth")
@@ -21,16 +23,6 @@ router = APIRouter(tags=["auth"])
 
 OTP_TTL_SECONDS = 5 * 60
 MAX_VERIFY_ATTEMPTS = 5
-
-
-@dataclass
-class OtpRecord:
-    code_hash: str
-    expires_at: float
-    attempts: int = 0
-
-
-_OTP_STORE: dict[str, OtpRecord] = {}
 
 
 class SendOtpRequest(BaseModel):
@@ -54,28 +46,26 @@ def _hash_code(phone: str, code: str) -> str:
     return hmac.new(secret.encode("utf-8"), f"{phone}:{code}".encode("utf-8"), hashlib.sha256).hexdigest()
 
 
-def _cleanup_expired() -> None:
-    now = time.time()
-    for phone, record in list(_OTP_STORE.items()):
-        if record.expires_at < now:
-            _OTP_STORE.pop(phone, None)
+def _cleanup_expired(db: Session) -> None:
+    db.query(OtpChallenge).filter(OtpChallenge.expires_at < datetime.now(timezone.utc)).delete()
 
 
 @router.post("/auth/send-otp")
-def send_otp(payload: SendOtpRequest):
-    _cleanup_expired()
+def send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
+    _cleanup_expired(db)
     phone = _normalize_phone(payload.phone)
 
     # Generate 6-digit verification code
     otp_code = f"{secrets.randbelow(900000) + 100000}"
-    _OTP_STORE[phone] = OtpRecord(
-        code_hash=_hash_code(phone, otp_code),
-        expires_at=time.time() + OTP_TTL_SECONDS,
-    )
-
-    # Print to developer console logs for easy debugging (especially if running mock)
-    print(f"\n🔑 [OTP SERVICE] Generated code for {phone} -> {otp_code} 🔑\n")
-    log.info("Generated OTP for %s -> %s", phone, otp_code)
+    challenge = db.get(OtpChallenge, phone)
+    if challenge is None:
+        challenge = OtpChallenge(phone=phone, code_hash="", expires_at=datetime.now(timezone.utc))
+        db.add(challenge)
+    challenge.code_hash = _hash_code(phone, otp_code)
+    challenge.expires_at = datetime.now(timezone.utc) + timedelta(seconds=OTP_TTL_SECONDS)
+    challenge.attempts = 0
+    db.commit()
+    log.info("Generated OTP challenge for %s", phone)
 
     message_text = f"Your Munim.ai verification code is: {otp_code}. Valid for 5 minutes. Do not share this code."
 
@@ -91,47 +81,35 @@ def send_otp(payload: SendOtpRequest):
 
 
 @router.post("/auth/verify-otp")
-def verify_otp(payload: VerifyOtpRequest):
-    _cleanup_expired()
+def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
+    _cleanup_expired(db)
     phone = _normalize_phone(payload.phone)
     code = payload.code.strip()
 
-    # Master bypass verification codes for easy demoing/hackathon presentations!
-    if code in ("888888", "123456"):
-        _OTP_STORE.pop(phone, None)
-        return {
-            "status": "verified",
-            "authenticated": True,
-            "access_token": create_access_token(phone),
-            "token_type": "bearer",
-        }
-
-    stored_code = _OTP_STORE.get(phone)
-    if not stored_code:
+    challenge = db.get(OtpChallenge, phone)
+    if not challenge:
         raise HTTPException(
             status_code=400,
             detail="No active OTP request found for this phone number."
         )
 
-    stored_code.attempts += 1
-    if stored_code.attempts > MAX_VERIFY_ATTEMPTS:
-        _OTP_STORE.pop(phone, None)
+    challenge.attempts += 1
+    if challenge.attempts > MAX_VERIFY_ATTEMPTS:
+        db.delete(challenge)
+        db.commit()
         raise HTTPException(
             status_code=429,
             detail="Too many verification attempts. Request a new code."
         )
 
-    if hmac.compare_digest(_hash_code(phone, code), stored_code.code_hash):
-        # Code is correct; remove it from active store
-        _OTP_STORE.pop(phone, None)
+    if hmac.compare_digest(_hash_code(phone, code), challenge.code_hash):
+        db.delete(challenge)
+        db.commit()
         return {
             "status": "verified",
             "authenticated": True,
             "access_token": create_access_token(phone),
             "token_type": "bearer",
         }
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid verification code."
-        )
+    db.commit()
+    raise HTTPException(status_code=400, detail="Invalid verification code.")

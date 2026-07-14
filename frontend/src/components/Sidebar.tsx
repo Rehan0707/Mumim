@@ -17,12 +17,14 @@ export default function Sidebar({
   business,
   live,
   onLogout,
+  onLanding,
 }: {
   page: string;
   onNav: (page: string) => void;
   business: { name: string; whatsapp_no: string } | null;
   live: boolean;
   onLogout: () => void;
+  onLanding: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -60,7 +62,7 @@ export default function Sidebar({
         </div>
 
         <div className="px-6 py-card-padding">
-          <h1 className="font-display text-display-lg font-bold text-primary">Munim.ai</h1>
+          <h1 onClick={onLanding} className="font-display text-display-lg font-bold text-primary cursor-pointer hover:opacity-85 transition-opacity">Munim.ai</h1>
           <p className="font-label-caps text-label-caps text-on-surface-variant mt-1">Live Ledger</p>
         </div>
 

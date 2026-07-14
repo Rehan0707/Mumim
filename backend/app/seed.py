@@ -56,7 +56,25 @@ CUSTOMERS = [
 ]
 
 
+def _ensure_random_app_secret() -> None:
+    from pathlib import Path
+    import secrets
+    import os
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if not env_path.exists():
+        return
+    content = env_path.read_text()
+    placeholder = "change-me-to-a-32-character-random-secret"
+    if placeholder in content:
+        new_secret = secrets.token_hex(16)
+        content = content.replace(placeholder, new_secret)
+        env_path.write_text(content)
+        if os.environ.get("APP_SECRET") == placeholder:
+            os.environ["APP_SECRET"] = new_secret
+
+
 def run() -> None:
+    _ensure_random_app_secret()
     from .config import settings
     if not settings.DATABASE_URL.startswith("sqlite"):
         from sqlalchemy import text, inspect

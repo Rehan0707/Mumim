@@ -37,6 +37,7 @@ All config is env-based (`app/config.py`, loaded from `.env`).
 | `RAZORPAY_KEY_ID` / `_SECRET` / `_WEBHOOK_SECRET` | — | Razorpay test creds |
 | `WHATSAPP_MODE` | `mock` | `mock` \| `twilio` |
 | `TWILIO_ACCOUNT_SID` / `_AUTH_TOKEN` / `_WHATSAPP_FROM` | — | Twilio Sandbox creds |
+| `GROQ_API_KEY` | — | optional: Groq API key for conversational LLM fallback |
 
 ---
 
@@ -67,9 +68,10 @@ All config is env-based (`app/config.py`, loaded from `.env`).
 
 1. Activate the Twilio WhatsApp Sandbox; note the join code + sandbox number.
 2. Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`.
-3. Expose the backend publicly (see ngrok below) and point the Sandbox
-   **When a message comes in** webhook to `https://<url>/webhook/whatsapp`
-   with method `POST`.
+3. In production, point the Sandbox **When a message comes in** webhook to
+   `https://backend-olive-delta-46.vercel.app/webhook/whatsapp` with method
+   `POST`. For a local-only demo, expose the local server with ngrok and use
+   `https://<ngrok-url>/webhook/whatsapp` instead.
 4. Have each tester join the Sandbox from WhatsApp by sending the console's
    `join <code>` message to the Twilio Sandbox number.
 5. Inbound Twilio form payloads are normalized in `routers/webhook.py`. For live
@@ -77,7 +79,8 @@ All config is env-based (`app/config.py`, loaded from `.env`).
    same request and does not depend on a second outbound REST call. JSON simulator
    requests still receive the normal JSON response.
 
-Ngrok URLs change when the tunnel restarts, so refresh this value before a demo.
+The production Vercel URL is stable. Ngrok URLs change when the tunnel restarts,
+so refresh the local-demo value before presenting from a laptop.
 
 ### Payments — Razorpay (`PAYMENT_MODE=razorpay`)
 
@@ -90,11 +93,11 @@ Ngrok URLs change when the tunnel restarts, so refresh this value before a demo.
 In mock mode, `generate_payment_link` returns a `upi://pay?…` intent link and the
 webhook accepts any body (no signing).
 
-### Public webhooks — ngrok
+### Local public webhooks — ngrok
 
 ```bash
 ./scripts/ngrok.sh 8000
-# webhook base = https://<subdomain>.ngrok-free.app
+# local webhook base = https://<subdomain>.ngrok-free.app
 #   Twilio   → /webhook/whatsapp
 #   Razorpay → /payments/webhook
 ```
@@ -119,7 +122,7 @@ a safe `500` (no internals leaked). See `app/errors.py`.
 
 ```bash
 cd backend && source .venv/bin/activate
-python -m pytest              # 28 tests: nlu, orders, pipeline, api
+python -m pytest              # 43 tests: nlu, orders, pipeline, api
 ```
 
 Tests use an isolated temp SQLite DB, re-seeded before each test (`tests/conftest.py`).
@@ -128,9 +131,11 @@ Tests use an isolated temp SQLite DB, re-seeded before each test (`tests/conftes
 
 ## 8. Deployment notes
 
-- **Backend + ML**: Render/Railway (or laptop + ngrok for the demo). Stateless
-  Uvicorn workers; scale horizontally.
-- **DB**: managed Postgres + pgvector (set `DATABASE_URL`); Redis for
-  sessions/queues later.
-- **Frontend**: static build on Vercel/Netlify (`npm run build`).
+- **Backend**: Vercel at `https://backend-olive-delta-46.vercel.app`. The REST
+  API and signed Twilio webhook run there; use polling instead of WebSockets in
+  the Firebase production frontend.
+- **DB**: Neon Postgres (set `DATABASE_URL` in Vercel); Redis and native vector
+  indexing remain future production-scale work.
+- **Frontend**: Firebase Hosting at `https://munim-app.web.app`, built with
+  `npm run build` and deployed with `firebase deploy --only hosting`.
 - Keep demo vs dev keys separate; never commit `.env` (git-ignored).

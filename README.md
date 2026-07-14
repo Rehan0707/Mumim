@@ -37,6 +37,7 @@ CRM auto-built from chats with segments, and analytics (revenue trend + forecast
 | sentence-transformers | Hashing bag-of-words embedder | replace `embeddings.embed_text()` |
 | FashionCLIP "Dikhao" | Text-hint stub (`pipeline._handle_visual`) | image embed in the same function |
 | LightGBM forecast | Moving-average projection | replace `analytics.summary` forecast |
+| Llama 3 on Groq | Groq API (smart fallback) | `GROQ_API_KEY` (optional, falls back to static template) |
 
 **Message pipeline** (`services/pipeline.py`) is the one path all inputs fan into —
 build once, reuse for text / voice / image, exactly as the TRD specifies.

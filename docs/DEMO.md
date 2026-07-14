@@ -35,11 +35,11 @@ Health check before you present: open http://localhost:8000/health → `payment_
 | 4:00 | Tech | Architecture + "real custom ML: FashionCLIP + Indic" slide |
 | 4:30 | Startup | TAM + "Shopify for 60M WhatsApp shops" |
 
-**The magic moment:** the customer's *"yes"* moves a number on the owner's dashboard in real time (websocket). Point at it.
+**The magic moment:** the customer's *"yes"* moves a number on the owner's dashboard. Local development uses a WebSocket; the deployed Firebase app refreshes through a five-second polling fallback compatible with Vercel.
 
 ## 3. Modes (know your switches)
 - **Payments:** `PAYMENT_MODE=razorpay` (live test links) — falls back to UPI link automatically if the API hiccups.
-- **WhatsApp:** `WHATSAPP_MODE=mock` (simulator — **use this on stage**, no wifi dependency). `twilio` needs SID/token (not wired; Twilio console outage).
+- **WhatsApp:** `WHATSAPP_MODE=mock` powers the local simulator without external messaging. Production `WHATSAPP_MODE=twilio` is wired through the signed Vercel webhook. In Twilio Sandbox, set **When a message comes in** to `https://backend-olive-delta-46.vercel.app/webhook/whatsapp` with method `POST`, then join the Sandbox from the phone.
 - **Dikhao:** real FashionCLIP if `ml/vision` deps + `embed_catalog` are done; else auto text-hint fallback.
 
 ## 4. Failure path (rehearse this!)
@@ -51,6 +51,7 @@ Health check before you present: open http://localhost:8000/health → `payment_
 ## 5. Pre-demo checklist
 - [ ] `python -m pytest` in backend → all green
 - [ ] Both servers up; `/health` returns ok
+- [ ] For a live phone test, the Twilio Sandbox webhook targets the Vercel URL and the phone has joined the Sandbox
 - [ ] Dashboard open on Home; simulator ready
 - [ ] Curated screenshots + voice note on the demo phone/laptop
 - [ ] FashionCLIP warmed (VISION_PRELOAD or one throwaway search)

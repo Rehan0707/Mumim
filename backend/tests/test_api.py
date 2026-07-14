@@ -154,17 +154,24 @@ def test_openapi_and_docs(client):
     assert client.get("/docs").status_code == 200
 
 
-def test_auth_otp_flow(client):
+def test_auth_otp_flow(client, monkeypatch):
+    from app.routers import auth
+
+    monkeypatch.setattr(auth.secrets, "randbelow", lambda _upper: 123456)
     # Send OTP
     r = client.post("/auth/send-otp", json={"phone": "9812345601"})
     assert r.status_code == 200
     assert r.json()["status"] == "sent"
 
-    # Verify using bypass code
-    v = client.post("/auth/verify-otp", json={"phone": "9812345601", "code": "888888"})
+    v = client.post("/auth/verify-otp", json={"phone": "9812345601", "code": "223456"})
     assert v.status_code == 200
     assert v.json()["status"] == "verified"
     assert v.json()["access_token"]
+
+
+def test_auth_has_no_master_bypass(client):
+    r = client.post("/auth/verify-otp", json={"phone": "9812345601", "code": "888888"})
+    assert r.status_code == 400
 
 
 def test_webhook_query_param_routing(client, db):
@@ -178,6 +185,12 @@ def test_webhook_query_param_routing(client, db):
     r = client.post("/businesses", json=body)
     assert r.status_code == 201
     biz2_id = r.json()["id"]
+
+    # Add product to Second Shop's catalog so the query lookup works
+    client.post(
+        f"/products?business_id={biz2_id}",
+        json={"name": "Maggi Noodles 70g", "price": 14, "stock_qty": 60}
+    )
 
     # Send a query to Second Shop using query parameters (for Twilio webhook sandbox form POSTs)
     q = client.post(

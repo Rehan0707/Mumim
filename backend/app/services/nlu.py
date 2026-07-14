@@ -45,7 +45,7 @@ def detect_lang(text: str) -> str:
 
 
 def _score(text: str, lexicon: set) -> int:
-    t = f" {text.lower()} "
+    t = f" {re.sub(r'[^a-z0-9\s]', ' ', text.lower())} "
     return sum(1 for kw in lexicon if f" {kw} " in t or t.strip().startswith(kw))
 
 
@@ -63,10 +63,17 @@ def parse(text: str, lang: Optional[str] = None) -> NLUResult:
     }
     intent = max(scores, key=scores.get)
     top = scores[intent]
+    
+    entities = extract_entities(text)
+    
     if top == 0:
-        # No signal — treat a short greeting-ish blob as greeting, else UNKNOWN.
-        intent = "GREETING" if len(lowered.split()) <= 2 else "UNKNOWN"
-        confidence = 0.3
+        # No signal — if we have product keywords, treat it as a QUERY, else greeting/unknown
+        if entities.get("keywords"):
+            intent = "QUERY"
+            confidence = 0.5
+        else:
+            intent = "GREETING" if len(lowered.split()) <= 2 else "UNKNOWN"
+            confidence = 0.3
     else:
         # QUERY and ORDER often co-occur ("size available? yes"); prefer ORDER when
         # a confirmation word is present. Only disambiguate between those two — never
@@ -75,7 +82,6 @@ def parse(text: str, lang: Optional[str] = None) -> NLUResult:
             intent = "ORDER"
         confidence = min(0.95, 0.55 + 0.15 * top)
 
-    entities = extract_entities(text)
     return NLUResult(intent=intent, lang=lang, confidence=confidence, entities=entities, raw=text)
 
 
@@ -96,7 +102,18 @@ def extract_entities(text: str) -> Dict[str, object]:
         break
 
     # product keywords: alphabetic tokens minus stopwords/intent words
-    stop = _ORDER | _QUERY | _GREETING | {"the", "a", "an", "me", "i", "to", "of", "size", "for"}
+    stop = (
+        _ORDER
+        | _QUERY
+        | _GREETING
+        | {
+            "the", "a", "an", "me", "i", "to", "of", "size", "for",
+            "who", "what", "where", "when", "why", "how", "you", "your", "he", "she", "it", "they", "we", "us",
+            "is", "are", "am", "was", "were", "be", "been", "do", "does", "did", "can", "could", "will", "would",
+            "should", "have", "has", "had", "this", "that", "these", "those", "there", "here", "with", "about",
+            "at", "by", "from", "on", "in", "out", "up", "down", "into", "over", "after", "before", "or", "and"
+        }
+    )
     keywords = [w for w in re.findall(r"[a-zA-Z]+", text.lower()) if w not in stop and len(w) > 1]
     if keywords:
         entities["keywords"] = keywords

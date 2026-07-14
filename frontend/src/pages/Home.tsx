@@ -10,9 +10,9 @@ export function Home({ bid, refreshKey, feed }: { bid: string; refreshKey: numbe
 
   useEffect(() => {
     if (!bid) return;
-    api.analytics(bid).then(setA).catch(() => {});
-    api.orders(bid).then((o) => setOrders(o.slice(0, 6))).catch(() => {});
-    api.dailySummary(bid).then(setSummary).catch(() => {});
+    api.analytics(bid).then(setA).catch(() => { });
+    api.orders(bid).then((o) => setOrders(o.slice(0, 6))).catch(() => { });
+    api.dailySummary(bid).then(setSummary).catch(() => { });
   }, [bid, refreshKey]);
 
   return (

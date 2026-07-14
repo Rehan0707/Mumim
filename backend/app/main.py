@@ -61,6 +61,22 @@ async def lifespan(app: FastAPI):
         settings.APP_ENV, settings.PAYMENT_MODE, settings.WHATSAPP_MODE,
         settings.DATABASE_URL.split("://")[0],
     )
+
+    # Warm up embeddings text encoder so first query doesn't hang the event loop
+    try:
+        from .embeddings import _load_encoder
+        _load_encoder()
+    except Exception as exc:
+        log.warning("Could not warm up text encoder: %s", exc)
+
+    # Warm up local LLM fallback if GROQ_API_KEY is not set and ML dependencies are present
+    if not os.environ.get("GROQ_API_KEY"):
+        try:
+            from .services.reply import _load_local_llm
+            _load_local_llm()
+        except Exception as exc:
+            log.info("Local LLM not pre-loaded (opt-in ML dependencies might be absent): %s", exc)
+
     if os.environ.get("VISION_PRELOAD", "").strip().lower() in {"1", "true", "yes"}:
         from .services import vision
         vision.warmup()

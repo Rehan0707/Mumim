@@ -15,7 +15,8 @@ def _load_env_file() -> None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, _, value = line.partition("=")
-        os.environ.setdefault(key.strip(), value.strip())
+        value = value.split("#", 1)[0].strip()
+        os.environ.setdefault(key.strip(), value)
 
 
 _load_env_file()
@@ -92,6 +93,8 @@ class Settings:
         errors: list[str] = []
         if self.auth_required and len(self.APP_SECRET) < 32:
             errors.append("APP_SECRET must be at least 32 characters when auth is required")
+        if self.APP_SECRET == "change-me-to-a-32-character-random-secret":
+            errors.append("APP_SECRET is using the public placeholder 'change-me-to-a-32-character-random-secret'")
         if not self.auth_required:
             errors.append("AUTH_REQUIRED=false is not market-ready in production")
         if self.PAYMENT_MODE == "mock" and not self.allow_production_mocks:

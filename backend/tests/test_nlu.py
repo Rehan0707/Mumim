@@ -1,5 +1,6 @@
 """Rule-based NLU: intent, entities, language."""
 from app.services import nlu
+from app.services import reply
 
 
 def test_query_intent_and_entities():
@@ -33,3 +34,7 @@ def test_hindi_language_detection():
 def test_quantity_extraction():
     r = nlu.parse("2 kg rice chahiye")
     assert r.entities.get("qty") == 2
+
+
+def test_local_fallback_fast_path_for_tests():
+    assert "Maggi" in reply.fallback("en", "do you have maggi?")

@@ -70,9 +70,9 @@ export default function Landing({ onSignIn, onDashboard }: { onSignIn: () => voi
     <div className="relative overflow-hidden bg-background">
       <header className="fixed top-0 w-full bg-surface/90 backdrop-blur-md z-50 shadow-sm transition-all duration-300">
         <div className="flex justify-between items-center h-20 px-margin-mobile md:px-margin-desktop w-full max-w-7xl mx-auto">
-          <div className="flex items-center gap-2">
+          <a href="#home" className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-opacity">
             <span className="font-headline-md text-headline-md text-primary">Munim.ai</span>
-          </div>
+          </a>
           <nav className="hidden md:flex gap-8 items-center">
             {navLinks.map((link) => (
               <a
@@ -135,23 +135,23 @@ export default function Landing({ onSignIn, onDashboard }: { onSignIn: () => voi
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <div className="bg-surface rounded-2xl p-card-padding shadow-soft-depth flex flex-col gap-8 h-full border border-outline-variant/30 relative overflow-hidden group reveal-on-scroll">
+            <div className="bg-surface rounded-2xl p-card-padding shadow-soft-depth flex flex-col gap-8 h-full border border-outline-variant/30 relative overflow-hidden group reveal-on-scroll hover:-translate-y-2 hover:shadow-float-depth transition-all duration-300">
               <div className="absolute inset-0 bg-gradient-to-br from-primary-fixed/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               <div className="relative z-10 flex flex-col gap-2">
                 <h3 className="font-headline-md text-headline-md text-on-surface">1. Text Context</h3>
                 <p className="font-body-sm text-body-sm text-on-surface-variant">Natural language understanding in Hinglish, Marathi, and pure Hindi.</p>
               </div>
-              <div className="mt-auto relative z-10 bg-surface-container-low rounded-xl p-4 flex flex-col gap-3">
-                <div className="bg-white p-3 rounded-lg rounded-tl-none shadow-sm w-3/4 text-sm text-on-surface border border-outline-variant/20">
+              <div className="mt-auto relative z-10 bg-[#ece5dd] rounded-xl p-4 flex flex-col gap-3">
+                <div className="bg-white p-3 rounded-lg rounded-tl-none shadow-sm w-3/4 text-sm text-slate-800 border border-outline-variant/10">
                   Nike shoes size 9 available?
                 </div>
-                <div className="bg-primary-container p-3 rounded-lg rounded-tr-none shadow-sm w-[85%] self-end text-sm text-on-primary-container">
+                <div className="bg-[#dcf8c6] p-3 rounded-lg rounded-tr-none shadow-sm w-[85%] self-end text-sm text-[#1a1a2e]">
                   Haan, 2 designs available hain. ₹<span className="font-numeral-md">2,499</span> and ₹<span className="font-numeral-md">3,199</span>. Send karu pictures?
                 </div>
               </div>
             </div>
 
-            <div className="bg-surface rounded-2xl p-card-padding shadow-soft-depth flex flex-col gap-8 h-full border border-outline-variant/30 relative overflow-hidden group reveal-on-scroll">
+            <div className="bg-surface rounded-2xl p-card-padding shadow-soft-depth flex flex-col gap-8 h-full border border-outline-variant/30 relative overflow-hidden group reveal-on-scroll hover:-translate-y-2 hover:shadow-float-depth transition-all duration-300">
               <div className="absolute inset-0 bg-gradient-to-br from-primary-fixed/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               <div className="relative z-10 flex flex-col gap-2">
                 <h3 className="font-headline-md text-headline-md text-on-surface">2. Visual Search</h3>
@@ -159,7 +159,16 @@ export default function Landing({ onSignIn, onDashboard }: { onSignIn: () => voi
               </div>
               <div className="mt-auto relative z-10 flex flex-col gap-4">
                 <div className="relative rounded-xl overflow-hidden shadow-sm h-32 w-full border border-outline-variant/20 bg-surface-container-lowest flex items-center justify-center">
-                  <span className="material-symbols-outlined text-4xl text-primary/30">image</span>
+                  <img
+                    src="/eye_scan.png"
+                    alt="Visual Search Eye Recognition"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/15 flex items-center justify-center backdrop-blur-[0.5px]">
+                    <div className="w-12 h-12 rounded-xl border-2 border-white/80 flex items-center justify-center shadow-md animate-pulse">
+                      <span className="material-symbols-outlined text-white text-2xl font-bold">fit_screen</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="bg-primary-container p-3 rounded-lg rounded-tr-none shadow-sm w-full text-sm text-on-primary-container">
                   3 similar milte-julte hain.
@@ -171,7 +180,7 @@ export default function Landing({ onSignIn, onDashboard }: { onSignIn: () => voi
               </div>
             </div>
 
-            <div className="bg-surface rounded-2xl p-card-padding shadow-soft-depth flex flex-col gap-8 h-full border border-outline-variant/30 relative overflow-hidden group reveal-on-scroll">
+            <div className="bg-surface rounded-2xl p-card-padding shadow-soft-depth flex flex-col gap-8 h-full border border-outline-variant/30 relative overflow-hidden group reveal-on-scroll hover:-translate-y-2 hover:shadow-float-depth transition-all duration-300">
               <div className="absolute inset-0 bg-gradient-to-br from-primary-fixed/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               <div className="relative z-10 flex flex-col gap-2">
                 <h3 className="font-headline-md text-headline-md text-on-surface">3. Voice Notes</h3>

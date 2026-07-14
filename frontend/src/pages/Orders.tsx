@@ -1,10 +1,22 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { Order } from "../types";
+import type { Order, Business } from "../types";
 import { Badge, Card, formatINR, timeAgo } from "../components/ui";
+import { InvoiceModal } from "../components/InvoiceModal";
 
-export function Orders({ bid, refreshKey, onChange }: { bid: string; refreshKey: number; onChange: () => void }) {
+export function Orders({ 
+  bid, 
+  business, 
+  refreshKey, 
+  onChange 
+}: { 
+  bid: string; 
+  business: Business | null; 
+  refreshKey: number; 
+  onChange: () => void 
+}) {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     if (!bid) return;
@@ -52,6 +64,13 @@ export function Orders({ bid, refreshKey, onChange }: { bid: string; refreshKey:
                 <td className="py-3 text-slate-400 text-xs">{timeAgo(o.created_at)}</td>
                 <td className="py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => setSelectedOrder(o)}
+                      className="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5"
+                      title="View Invoice"
+                    >
+                      🧾 Invoice
+                    </button>
                     {o.status === "reserved" && (
                       <>
                         {o.payment_link && (
@@ -95,6 +114,14 @@ export function Orders({ bid, refreshKey, onChange }: { bid: string; refreshKey:
           </tbody>
         </table>
       </div>
+
+      {selectedOrder && (
+        <InvoiceModal
+          order={selectedOrder}
+          business={business}
+          onClose={() => setSelectedOrder(null)}
+        />
+      )}
     </Card>
   );
 }

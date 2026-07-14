@@ -46,9 +46,20 @@ body {
 }
 
 @keyframes pulse-signal {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .animate-pulse-signal {
@@ -56,9 +67,20 @@ body {
 }
 
 @keyframes pulse-ring {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.5); opacity: 0; }
-  100% { transform: scale(1); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
 }
 
 .animate-pulse-ring {
@@ -66,8 +88,15 @@ body {
 }
 
 @keyframes slideUpFade {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-slide-up {
@@ -75,8 +104,17 @@ body {
 }
 
 @keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.2); opacity: 1; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
 }
 
 .animate-breathe {
@@ -124,25 +162,125 @@ body {
   -webkit-font-smoothing: antialiased;
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
 }
-.material-symbols-outlined.fill { font-variation-settings: "FILL" 1; }
+
+.material-symbols-outlined.fill {
+  font-variation-settings: "FILL" 1;
+}
 
 /* --- Lenis smooth scroll (landing page) --- */
-html.lenis { scroll-behavior: auto; }
-.lenis.lenis-smooth { scroll-behavior: auto; }
-.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
-.lenis.lenis-stopped { overflow: hidden; }
-.lenis.lenis-scrolling iframe { pointer-events: none; }
+html.lenis {
+  scroll-behavior: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
 
 /* --- animations used by the new pages --- */
 @keyframes pulse-signal {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
-.animate-pulse-signal { animation: pulse-signal 2s infinite ease-in-out; }
+
+.animate-pulse-signal {
+  animation: pulse-signal 2s infinite ease-in-out;
+}
+
 @keyframes pulse-ring {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.5); opacity: 0; }
-  100% { transform: scale(1); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
 }
-.animate-pulse-ring { animation: pulse-ring 2s infinite ease-out; }
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s infinite ease-out;
+}
+
+/* --- Print styles for Invoice Generator --- */
+@media print {
+  aside, 
+  header, 
+  .no-print, 
+  table, 
+  button,
+  .lg\:sticky, 
+  .flex-col.gap-2.sm\:flex-row,
+  h3 {
+    display: none !important;
+  }
+
+  body, 
+  html, 
+  #root, 
+  .min-h-screen, 
+  main, 
+  .min-w-0, 
+  .p-5,
+  .flex-1 {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    position: static !important;
+    box-shadow: none !important;
+    border: none !important;
+    float: none !important;
+    width: 100% !important;
+  }
+
+  .print-invoice-container {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 1.5cm !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-block {
+    display: block !important;
+  }
+}
