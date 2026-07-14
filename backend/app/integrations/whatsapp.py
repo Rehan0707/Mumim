@@ -45,9 +45,20 @@ def _send_twilio(to: str, body: str) -> dict:
         raise RuntimeError(
             "Twilio not configured: set TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_WHATSAPP_FROM"
         )
-    data = urllib.parse.urlencode(
-        {"From": f"whatsapp:{sender}", "To": f"whatsapp:{to}", "Body": body}
-    ).encode()
+    
+    import re
+    params = {"From": f"whatsapp:{sender}", "To": f"whatsapp:{to}"}
+    template_sid = settings.TWILIO_OTP_TEMPLATE_SID
+    if template_sid:
+        params["ContentSid"] = template_sid
+        otp_match = re.search(r"\b\d{6}\b", body)
+        if otp_match:
+            otp_code = otp_match.group(0)
+            params["ContentVariables"] = json.dumps({"1": otp_code})
+    else:
+        params["Body"] = body
+
+    data = urllib.parse.urlencode(params).encode()
     req = urllib.request.Request(TWILIO_API.format(sid=sid), data=data, method="POST")
     auth = base64.b64encode(f"{sid}:{token}".encode()).decode()
     req.add_header("Authorization", f"Basic {auth}")

@@ -62,6 +62,7 @@ class Settings:
     TWILIO_ACCOUNT_SID: str = os.environ.get("TWILIO_ACCOUNT_SID", "")
     TWILIO_AUTH_TOKEN: str = os.environ.get("TWILIO_AUTH_TOKEN", "")
     TWILIO_WHATSAPP_FROM: str = os.environ.get("TWILIO_WHATSAPP_FROM", "")
+    TWILIO_OTP_TEMPLATE_SID: str = os.environ.get("TWILIO_OTP_TEMPLATE_SID", "")
 
     @property
     def is_production(self) -> bool:
