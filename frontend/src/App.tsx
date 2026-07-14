@@ -24,9 +24,73 @@ type View = "landing" | "auth" | "onboarding" | "dashboard";
 // Front-door router: Landing → Auth → Onboarding → the live Dashboard.
 export default function App() {
   const [session, setSession] = useState<DemoSession | null>(() => loadSession());
-  const [view, setView] = useState<View>(() => (loadSession()?.authenticated ? "dashboard" : "landing"));
+  const [view, setView] = useState<View>(() => {
+    const path = window.location.pathname;
+    if (path === "/auth") return "auth";
+    if (path === "/onboarding") return "onboarding";
+    if (path.startsWith("/dashboard")) {
+      return loadSession()?.authenticated ? "dashboard" : "auth";
+    }
+    return "landing";
+  });
+  const [page, setPage] = useState<PageKey>(() => {
+    const path = window.location.pathname;
+    if (path.startsWith("/dashboard/")) {
+      const sub = path.substring("/dashboard/".length) as PageKey;
+      const validPages: PageKey[] = ["home", "inventory", "orders", "crm", "analytics", "settings"];
+      if (validPages.includes(sub)) {
+        return sub;
+      }
+    }
+    return "home";
+  });
 
   const authenticated = Boolean(session?.authenticated);
+
+  // Sync view and page state to browser URL path
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    let targetPath = "/";
+    if (view === "auth") {
+      targetPath = "/auth";
+    } else if (view === "onboarding") {
+      targetPath = "/onboarding";
+    } else if (view === "dashboard") {
+      targetPath = page === "home" ? "/dashboard" : `/dashboard/${page}`;
+    }
+
+    if (currentPath !== targetPath) {
+      window.history.pushState(null, "", targetPath);
+    }
+  }, [view, page]);
+
+  // Sync browser back/forward buttons back to React state
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === "/auth") {
+        setView("auth");
+      } else if (path === "/onboarding") {
+        setView("onboarding");
+      } else if (path.startsWith("/dashboard")) {
+        const authOk = Boolean(loadSession()?.authenticated);
+        setView(authOk ? "dashboard" : "auth");
+        
+        const sub = path.substring("/dashboard/".length) as PageKey;
+        const validPages: PageKey[] = ["home", "inventory", "orders", "crm", "analytics", "settings"];
+        if (validPages.includes(sub)) {
+          setPage(sub);
+        } else {
+          setPage("home");
+        }
+      } else {
+        setView("landing");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   if (view === "landing") {
     return (
@@ -80,10 +144,13 @@ export default function App() {
   return (
     <Dashboard
       session={session}
+      page={page}
+      setPage={setPage}
       onSignOut={() => {
         clearSession();
         setSession(null);
         setView("landing");
+        setPage("home");
       }}
       onLanding={() => setView("landing")}
     />
@@ -101,13 +168,14 @@ const PAGE_TITLES: Record<PageKey, string> = {
 
 interface DashboardProps {
   session: DemoSession | null;
+  page: PageKey;
+  setPage: (p: PageKey) => void;
   onSignOut: () => void;
   onLanding: () => void;
 }
 
-function Dashboard({ session, onSignOut, onLanding }: DashboardProps) {
+function Dashboard({ session, page, setPage, onSignOut, onLanding }: DashboardProps) {
   const [business, setBusiness] = useState<Business | undefined>();
-  const [page, setPage] = useState<PageKey>("home");
   const [live, setLive] = useState(false);
   const [polling, setPolling] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);

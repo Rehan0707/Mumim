@@ -12,9 +12,11 @@ type TemplateType = "modern" | "classic" | "minimalist";
 
 export function InvoiceModal({ order, business, onClose }: InvoiceModalProps) {
   const [template, setTemplate] = useState<TemplateType>("modern");
+  
+  const isDefaultDemo = business?.whatsapp_no === "+919800000000";
   const [shopName, setShopName] = useState(business?.name || "Ramesh Vastralaya & General Store");
-  const [address, setAddress] = useState("12, Main Bazaar, Near Town Hall, Mumbai, Maharashtra - 400001");
-  const [gstin, setGstin] = useState("27AAAAA1111A1Z1");
+  const [address, setAddress] = useState(isDefaultDemo ? "12, Main Bazaar, Near Town Hall, Mumbai, Maharashtra - 400001" : "");
+  const [gstin, setGstin] = useState(isDefaultDemo ? "27AAAAA1111A1Z1" : "");
   const [notes, setNotes] = useState("Thank you for shopping with us! Please scan the QR code to pay via UPI.");
   const [isEditing, setIsEditing] = useState(false);
 
