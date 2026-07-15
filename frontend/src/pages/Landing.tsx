@@ -3,7 +3,7 @@ import Lenis from "lenis";
 import ShaderGradient from "../components/ShaderGradient";
 import { SpotlightCard } from "../components/ui/spotlight-card";
 import { HoverEffect } from "../components/ui/hover-effect";
-import { TextRevealCard } from "../components/ui/text-reveal-card";
+import { MagicText } from "../components/ui/magic-text";
 
 /* ── smooth scroll ── */
 function useLenis() {
@@ -89,11 +89,10 @@ export default function Landing({
     <div className="relative overflow-hidden bg-[#020a07]" style={{ colorScheme: "dark" }}>
       {/* ── FIXED HEADER ── */}
       <header
-        className={`fixed top-0 w-full z-50 transition-all duration-500 ${
-          scrolled
-            ? "bg-[#020a07]/80 backdrop-blur-xl border-b border-white/[0.06]"
-            : "bg-transparent"
-        }`}
+        className={`fixed top-0 w-full z-50 transition-all duration-500 ${scrolled
+          ? "bg-[#020a07]/80 backdrop-blur-xl border-b border-white/[0.06]"
+          : "bg-transparent"
+          }`}
       >
         <div className="flex justify-between items-center h-20 px-6 md:px-12 w-full max-w-7xl mx-auto">
           {/* logo */}
@@ -279,8 +278,12 @@ export default function Landing({
                 </p>
               </div>
               <div className="flex flex-col gap-3 mt-auto">
-                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] h-28 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-white/10 text-5xl">image</span>
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] h-28 overflow-hidden">
+                  <img
+                    src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=200&fit=crop&auto=format"
+                    alt="Red Nike shoe product photo"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div className="bg-[#0f5c46]/60 p-3 rounded-lg rounded-tr-none text-white/80 text-sm">
                   3 similar milte-julte hain — yeh dekho →
@@ -379,21 +382,24 @@ export default function Landing({
             {/* text */}
             <div>
               <h3 className="text-white font-display text-2xl font-semibold mb-4">Meet Ramesh.</h3>
-              <p className="text-white/40 text-base leading-relaxed mb-4">
-                He runs a bustling general store in Kolhapur, managing over 300 different items daily. He doesn't have time to learn complicated software or sit at a computer entering receipts.
-              </p>
-              <p className="text-white/40 text-base leading-relaxed">
-                For Ramesh, his storefront isn't just a physical space — it's heavily reliant on WhatsApp. Orders come in via voice notes, suppliers send bills as blurry photos, and customers promise payment over text.
-              </p>
+              <MagicText
+                text="He runs a bustling general store in Kolhapur, managing over 300 different items daily. He doesn't have time to learn complicated software or sit at a computer entering receipts."
+                className="p-0 leading-relaxed mb-4"
+                wordClassName="text-base font-normal text-white mt-1"
+              />
+              <MagicText
+                text="For Ramesh, his storefront isn't just a physical space — it's heavily reliant on WhatsApp. Orders come in via voice notes, suppliers send bills as blurry photos, and customers promise payment over text."
+                className="p-0 leading-relaxed"
+                wordClassName="text-base font-normal text-white mt-1"
+              />
             </div>
           </div>
 
           {/* big quote */}
-          <div className="max-w-3xl mx-auto mt-24 reveal-on-scroll flex justify-center w-full">
-            <TextRevealCard
-              text="We're not building software for shops."
-              revealText="We're building the memory they never had time to keep."
-              className="bg-[#020a07]/50 border border-white/[0.08]"
+          <div className="max-w-3xl mx-auto mt-24 flex justify-center w-full">
+            <MagicText
+              text="We're not building software for shops. We're building the memory they never had time to keep."
+              className="text-white"
             />
           </div>
         </div>
@@ -461,11 +467,10 @@ export default function Landing({
                 ].map((step) => (
                   <div key={step.num} className="relative">
                     <div
-                      className={`absolute -left-[41px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
-                        step.active
-                          ? "bg-[#4ae176] text-[#020a07]"
-                          : "bg-white/[0.08] border border-white/[0.15] text-white/50"
-                      }`}
+                      className={`absolute -left-[41px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${step.active
+                        ? "bg-[#4ae176] text-[#020a07]"
+                        : "bg-white/[0.08] border border-white/[0.15] text-white/50"
+                        }`}
                     >
                       {step.active ? "✓" : step.num}
                     </div>
