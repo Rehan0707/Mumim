@@ -8,26 +8,25 @@ const VERTEX_SHADER = `
 `;
 
 const FRAGMENT_SHADER = `
-  precision mediump float;
+  precision highp float;
   uniform float u_time;
   uniform vec2 u_resolution;
 
-  // Simplex-style 2D noise
+  // ── Simplex 2-D noise ──
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec3 permute(vec3 x) { return mod289(((x * 34.0) + 1.0) * x); }
 
   float snoise(vec2 v) {
     const vec4 C = vec4(
-      0.211324865405187,   // (3.0-sqrt(3.0))/6.0
-      0.366025403784439,   // 0.5*(sqrt(3.0)-1.0)
-     -0.577350269189626,   // -1.0 + 2.0 * C.x
-      0.024390243902439    // 1.0 / 41.0
+      0.211324865405187,
+      0.366025403784439,
+     -0.577350269189626,
+      0.024390243902439
     );
     vec2 i  = floor(v + dot(v, C.yy));
     vec2 x0 = v - i + dot(i, C.xx);
-    vec2 i1;
-    i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+    vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
     vec4 x12 = x0.xyxy + C.xxzz;
     x12.xy -= i1;
     i = mod289(i);
@@ -46,38 +45,70 @@ const FRAGMENT_SHADER = `
     return 130.0 * dot(m, g);
   }
 
+  // ── Fractional Brownian Motion (4 octaves) ──
+  float fbm(vec2 p) {
+    float value = 0.0;
+    float amp   = 0.5;
+    for (int i = 0; i < 4; i++) {
+      value += amp * snoise(p);
+      p    *= 2.0;
+      amp  *= 0.5;
+    }
+    return value;
+  }
+
+  // ── Film grain / glitter hash ──
+  float hash(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+
   void main() {
     vec2 uv = gl_FragCoord.xy / u_resolution;
-    float t = u_time * 0.15;
+    float aspect = u_resolution.x / u_resolution.y;
+    vec2 st = vec2(uv.x * aspect, uv.y);
+    float t = u_time * 0.08;
 
-    // Create layered organic noise
-    float n1 = snoise(uv * 1.5 + vec2(t * 0.4, t * 0.3));
-    float n2 = snoise(uv * 2.8 + vec2(-t * 0.25, t * 0.5));
-    float n3 = snoise(uv * 0.8 + vec2(t * 0.15, -t * 0.2));
+    // ── Domain warping (Inigo Quilez) for organic morphing ──
+    vec2 q = vec2(
+      fbm(st * 1.8 + vec2(0.0, 0.0) + t * 0.35),
+      fbm(st * 1.8 + vec2(5.2, 1.3) + t * 0.4)
+    );
+    vec2 r = vec2(
+      fbm(st * 1.8 + 3.5 * q + vec2(1.7, 9.2) + t * 0.15),
+      fbm(st * 1.8 + 3.5 * q + vec2(8.3, 2.8) + t * 0.18)
+    );
+    float f = fbm(st * 1.8 + 3.5 * r);
 
-    float blend = (n1 + n2 * 0.5 + n3 * 0.3) * 0.55 + 0.5;
+    // ── Munim brand palette (light theme) ──
+    vec3 c1 = vec3(0.961, 0.984, 0.969); // #f5fbf7 light mint
+    vec3 c2 = vec3(0.878, 0.961, 0.918); // #e0f5ea soft sage
+    vec3 c3 = vec3(0.773, 0.922, 0.835); // #c5ebd5 light emerald
+    vec3 c4 = vec3(0.616, 0.863, 0.722); // #9ddcb8 medium mint
+    vec3 c5 = vec3(0.478, 0.812, 0.667); // #7acfaa soft teal
 
-    // Munim brand colors: dark slate → forest green → deep green → teal → emerald
-    vec3 c1 = vec3(0.008, 0.039, 0.027); // #020a07 deep dark background
-    vec3 c2 = vec3(0.020, 0.110, 0.071); // #051c12 very dark forest
-    vec3 c3 = vec3(0.043, 0.227, 0.145); // #0b3a25 dark emerald
-    vec3 c4 = vec3(0.059, 0.361, 0.275); // #0f5c46 munim green
-    vec3 c5 = vec3(0.071, 0.549, 0.494); // #128c7e teal
+    // ── Rich color blending driven by warp field ──
+    vec3 color = mix(c1, c2, clamp(f * f * 2.0, 0.0, 1.0));
+    color = mix(color, c3, clamp(length(q) * 1.2, 0.0, 1.0));
+    color = mix(color, c4, clamp(length(r.x) * 0.9, 0.0, 1.0));
+    color = mix(color, c5, clamp(r.y * r.y * 1.5, 0.0, 1.0));
 
-    vec3 color;
-    if (blend < 0.25) {
-      color = mix(c1, c2, blend / 0.25);
-    } else if (blend < 0.45) {
-      color = mix(c2, c3, (blend - 0.25) / 0.20);
-    } else if (blend < 0.65) {
-      color = mix(c3, c4, (blend - 0.45) / 0.20);
-    } else {
-      color = mix(c4, c5, (blend - 0.65) / 0.35);
-    }
+    // ── 3-D specular / glossy highlight ──
+    float highlight = smoothstep(0.2, 0.6, f) * smoothstep(0.85, 0.4, f);
+    color += vec3(highlight * 0.07);
 
-    // Subtle vignette
-    float vignette = 1.0 - 0.3 * length(uv - 0.5);
-    color *= vignette;
+    // ── Iridescent shimmer ──
+    float shimmer = snoise(uv * 14.0 + t * 2.5) * 0.018;
+    color += shimmer;
+
+    // ── Animated film grain / glitter ──
+    float grain = hash(gl_FragCoord.xy + fract(u_time) * 137.0);
+    color += (grain - 0.5) * 0.03;
+
+    // ── Soft vignette ──
+    float vig = 1.0 - 0.12 * length(uv - 0.5);
+    color *= vig;
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -145,11 +176,20 @@ export default function ShaderGradient({ className = "", style }: ShaderGradient
     const uTime = gl.getUniformLocation(program, "u_time");
     const uRes = gl.getUniformLocation(program, "u_resolution");
 
+    let isVisible = true;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry.isIntersecting;
+      },
+      { threshold: 0.05 }
+    );
+    observer.observe(canvas);
+
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio, 2);
+      const dpr = Math.min(window.devicePixelRatio, 1.5);
       let w = canvas.clientWidth * dpr;
       let h = canvas.clientHeight * dpr;
-      
+
       if (w <= 0) w = window.innerWidth * dpr;
       if (h <= 0) h = (canvas.parentElement?.clientHeight || window.innerHeight) * dpr;
 
@@ -165,17 +205,20 @@ export default function ShaderGradient({ className = "", style }: ShaderGradient
     window.addEventListener("resize", handleResize);
 
     const render = (time: number) => {
-      resize();
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.uniform1f(uTime, time * 0.001);
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      if (isVisible) {
+        resize();
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.uniform1f(uTime, time * 0.001);
+        gl.uniform2f(uRes, canvas.width, canvas.height);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      }
       rafRef.current = requestAnimationFrame(render);
     };
 
     rafRef.current = requestAnimationFrame(render);
 
     return () => {
+      observer.disconnect();
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(rafRef.current);
       gl.deleteProgram(program);

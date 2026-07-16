@@ -288,11 +288,11 @@ function Dashboard({ session, page, setPage, onSignOut, onLanding }: DashboardPr
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen glass-mesh-bg flex">
       <Sidebar page={page} onNav={(p: string) => setPage(p as PageKey)} business={business ?? null} live={live} onLogout={signOut} onLanding={onLanding} />
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden md:ml-64">
-        <header className="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-touch-target-min bg-surface shadow-sm z-10 md:hidden">
+        <header className="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-touch-target-min glass-header bg-white/45 backdrop-blur-xl border-b border-white/20 shadow-glass z-10 md:hidden">
           <h1 onClick={onLanding} className="font-display text-display-lg-mobile font-bold text-primary cursor-pointer hover:opacity-80 transition-opacity">Munim.ai</h1>
           <div className="flex gap-4">
             <button className="text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-all">
