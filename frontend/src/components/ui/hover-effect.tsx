@@ -35,7 +35,7 @@ export const HoverEffect = ({
           <AnimatePresence>
             {hoveredIndex === idx && (
               <motion.span
-                className="absolute inset-0 h-full w-full bg-white/[0.06] border border-white/[0.08] block rounded-2xl"
+                className="absolute inset-0 h-full w-full bg-white/30 backdrop-blur-sm border border-white/40 block rounded-2xl"
                 layoutId="hoverBackground"
                 initial={{ opacity: 0 }}
                 animate={{
@@ -51,7 +51,7 @@ export const HoverEffect = ({
           </AnimatePresence>
           <Card>
             {item.icon && (
-              <span className="material-symbols-outlined text-[#4ae176] text-3xl mb-2 block">
+              <span className="material-symbols-outlined text-[#059669] text-3xl mb-2 block">
                 {item.icon}
               </span>
             )}
@@ -77,7 +77,7 @@ export const Card = ({
   return (
     <div
       className={cn(
-        "rounded-xl h-full w-full p-4 overflow-hidden bg-white/[0.03] border border-white/[0.06] group-hover:border-white/[0.12] transition-colors duration-200 relative z-20",
+        "rounded-xl h-full w-full p-4 overflow-hidden bg-white/45 backdrop-blur-xl border border-white/35 group-hover:border-white/50 group-hover:bg-white/60 transition-all duration-200 relative z-20",
         className
       )}
     >
@@ -96,7 +96,7 @@ export const CardTitle = ({
   children: React.ReactNode;
 }) => {
   return (
-    <h4 className={cn("text-white font-display text-sm font-semibold tracking-wide mt-1", className)}>
+    <h4 className={cn("text-[#0f2b1d] font-display text-sm font-semibold tracking-wide mt-1", className)}>
       {children}
     </h4>
   );
@@ -112,7 +112,7 @@ export const CardDescription = ({
   return (
     <p
       className={cn(
-        "text-white/40 tracking-wide leading-relaxed text-xs mt-1",
+        "text-[#0f2b1d]/50 tracking-wide leading-relaxed text-xs mt-1",
         className
       )}
     >

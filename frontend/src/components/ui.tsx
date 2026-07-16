@@ -3,7 +3,7 @@ import { type ReactNode } from "react";
 export function Card({ className, children, ...rest }: { className?: string; children?: ReactNode; [key: string]: unknown }) {
   return (
     <div
-      className={`rounded-2xl bg-surface p-card-padding shadow-soft-depth ${className ?? ""}`}
+      className={`rounded-2xl glass-card p-card-padding shadow-glass ${className ?? ""}`}
       {...rest}
     >
       {children}
@@ -68,12 +68,12 @@ interface StatCardProps {
 
 export function StatCard({ label, value, sub, accent }: StatCardProps) {
   return (
-    <Card className={`p-5 ${accent ? "bg-brand-900 border-brand-900" : ""}`}>
-      <div className={`text-xs font-semibold uppercase tracking-wide ${accent ? "text-brand-100/70" : "text-slate-400"}`}>
+    <Card className={`p-5 backdrop-blur-xl ${accent ? "bg-[#059669]/15 border-[#059669]/30 text-[#0f2b1d]" : "bg-white/45 border-white/35"}`}>
+      <div className={`text-xs font-semibold uppercase tracking-wide ${accent ? "text-[#059669]" : "text-slate-400"}`}>
         {label}
       </div>
-      <div className={`mt-2 text-3xl font-extrabold ${accent ? "text-white" : "text-slate-800"}`}>{value}</div>
-      {sub && <div className={`mt-1 text-sm ${accent ? "text-brand-100/80" : "text-slate-400"}`}>{sub}</div>}
+      <div className="mt-2 text-3xl font-extrabold text-[#0f2b1d]">{value}</div>
+      {sub && <div className={`mt-1 text-sm ${accent ? "text-[#0f2b1d]/75" : "text-slate-400"}`}>{sub}</div>}
     </Card>
   );
 }
@@ -81,7 +81,7 @@ export function StatCard({ label, value, sub, accent }: StatCardProps) {
 export function Input({ className, ...rest }: { className?: string; [key: string]: unknown }) {
   return (
     <input
-      className={`rounded-xl border border-outline-variant bg-surface px-4 py-3 text-body-sm text-on-surface outline-none placeholder:text-on-surface-variant/60 focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 ${className ?? ""}`}
+      className={`rounded-xl glass-input px-4 py-3 text-body-sm text-[#0f2b1d] outline-none placeholder-[#0f2b1d]/40 focus:ring-2 focus:ring-[#059669]/10 ${className ?? ""}`}
       {...rest}
     />
   );
