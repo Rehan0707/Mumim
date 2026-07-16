@@ -46,6 +46,11 @@ CATALOG = [
     ("Toor Dal 1kg", "Tata Sampann", "grocery", {"weight": "1kg"}, 160, 15, "photo-1596797038530-2c107229654b"),
     ("Colgate Toothpaste 100g", "Colgate", "personal-care", {"weight": "100g"}, 55, 22, "photo-1607613009820-a29f7bb81c04"),
     ("Dettol Soap 125g", "Dettol", "personal-care", {"weight": "125g"}, 40, 35, "photo-1600857544200-b2f666a9a2ec"),
+    # --- electronics ---
+    ("iPhone 15 Pro Max", "Apple", "electronics", {"storage": "256GB", "color": "titanium"}, 139900, 5, "photo-1511707171634-5f897ff02aa9"),
+    ("Galaxy S24 Ultra", "Samsung", "electronics", {"storage": "512GB", "color": "black"}, 129900, 8, "photo-1610945265064-0e34e5519bbf"),
+    ("WH-1000XM5 Headphones", "Sony", "electronics", {"type": "wireless", "color": "silver"}, 29990, 10, "photo-1505740420928-5e560c06d30e"),
+    ("MacBook Air M3", "Apple", "electronics", {"ram": "8GB", "ssd": "256GB"}, 99900, 6, "photo-1517336714731-489689fd1ca8"),
 ]
 
 CUSTOMERS = [
