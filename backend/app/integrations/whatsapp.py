@@ -23,15 +23,17 @@ log = logging.getLogger("munim.whatsapp")
 TWILIO_API = "https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
 
 
-def send_message(to: str, body: str) -> dict:
+# 👈 YAHAN 'media_url' parameter add kiya hai
+def send_message(to: str, body: str, media_url: str = None) -> dict:
     """Send a WhatsApp message to `to`. Returns a receipt dict."""
     if settings.WHATSAPP_MODE != "twilio":
-        log.info("[mock-whatsapp] -> %s: %s", to, (body or "").replace("\n", " ⏎ "))
-        return {"mode": "mock", "to": to, "status": "logged"}
-    return _send_twilio(to, body)
+        log.info("[mock-whatsapp] -> %s: %s (media: %s)", to, (body or "").replace("\n", " ⏎ "), media_url)
+        return {"mode": "mock", "to": to, "status": "logged", "media": media_url}
+    return _send_twilio(to, body, media_url)
 
 
-def _send_twilio(to: str, body: str) -> dict:
+# 👈 YAHAN BHI 'media_url' handle kiya hai
+def _send_twilio(to: str, body: str, media_url: str = None) -> dict:
     sid, token, sender = (
         settings.TWILIO_ACCOUNT_SID,
         settings.TWILIO_AUTH_TOKEN,
@@ -41,9 +43,16 @@ def _send_twilio(to: str, body: str) -> dict:
         raise RuntimeError(
             "Twilio not configured: set TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_WHATSAPP_FROM"
         )
-    data = urllib.parse.urlencode(
-        {"From": f"whatsapp:{sender}", "To": f"whatsapp:{to}", "Body": body}
-    ).encode()
+    
+    # Payload banana
+    payload = {"From": f"whatsapp:{sender}", "To": f"whatsapp:{to}", "Body": body}
+    
+    # Agar audio ya image hai, toh Twilio ke payload mein MediaUrl daal do
+    if media_url:
+        payload["MediaUrl"] = media_url
+
+    data = urllib.parse.urlencode(payload).encode()
+    
     req = urllib.request.Request(TWILIO_API.format(sid=sid), data=data, method="POST")
     auth = base64.b64encode(f"{sid}:{token}".encode()).decode()
     req.add_header("Authorization", f"Basic {auth}")

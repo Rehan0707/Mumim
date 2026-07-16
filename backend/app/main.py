@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .db import Base, engine
@@ -72,14 +73,19 @@ app = FastAPI(
     description=(
         "WhatsApp-first AI Business Operating System for local shops.\n\n"
         "One message pipeline handles text/voice/image → NLU → catalog search → "
-        "order + payment + inventory, with live dashboard push. Built for the "
-        "Takeover'26 hackathon. Runs fully in **mock mode** with zero external keys."
+        "order + payment + inventory, with live dashboard push. Built for Agentathon 2026. "
+        "Runs fully in **mock mode** with zero external keys."
     ),
     openapi_tags=TAGS_METADATA,
     contact={"name": "Munim.ai Team", "url": "https://github.com/Rehan0707/Mumim"},
     license_info={"name": "MIT"},
     lifespan=lifespan,
 )
+
+# 👈 YAHAN STATIC FILES MOUNT KIYA HAI
+os.makedirs("static", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 # Order matters: request-context (outermost) wraps CORS wraps the app.
 app.add_middleware(RequestContextMiddleware)

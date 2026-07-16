@@ -90,21 +90,26 @@ def last_order(order: Optional[dict], lang: str) -> str:
     return f"Your last order was: {items} — {price}. Want it again? 🙂"
 
 
-def fallback(lang: str, user_message: str = "") -> str:
-    """Smart fallback powered by Llama 3 on Groq."""
+def fallback(lang: str, user_message: str = "", inventory_context: str = "") -> str:
+    """Smart fallback powered by Llama 3 on Groq with Database Context."""
     
-    # Agar function call mein user_message nahi pass hua, toh purana reply de do
     if not user_message:
         return "Ek minute, main check karke batata hoon 🙏" if lang == "hi" else "One minute, let me check and get back to you 🙏"
     
-    # Llama 3 ka dimaag (System Prompt)
-    system_prompt = """Tu ek smart, polite aur conversational WhatsApp shopping assistant hai. 
-Humare store mein sirf ye cheezein milti hain: Shoes, Grocery items, Personal Care products, Watches aur Clothing. 
-Tera kaam user ke messages ka natural Hindi-English mix mein chota aur friendly reply karna hai. 
-Lekin dhyan rahe:
-1. Agar user koi aisi cheez maange jo hum nahi bechte (jaise mobile phones ya electronics), toh politely mana kar de aur humare available categories (Shoes, Grocery, Personal Care, Watches, Clothing) suggest kar.
-2. User ke sawalon ka jawab hamesha store ki categories ke hisaab se de.
-3. Kripya sirf plain text reply de, koi code ya lists mat bhej."""
+    # Llama 3 ka NAYA dimaag (Language-Aware Dynamic System Prompt)
+    # Llama 3 ka NAYA dimaag (Short & Crisp Audio-Friendly Prompt)
+    system_prompt = f"""You are a smart, polite, and conversational WhatsApp shopping assistant for a local store. 
+Our shop currently has these items in stock: {inventory_context}.
+
+CRITICAL RULE: You MUST reply in the EXACT SAME LANGUAGE as the user's message. 
+- If the user writes/speaks in English, reply in pure English. 
+- If the user writes/speaks in Hindi or Hinglish, reply in Hindi/Hinglish.
+
+Other Rules:
+1. AUDIO FRIENDLY: Your reply will be converted to a voice note. Keep it VERY SHORT (Maximum 2-3 sentences).
+2. DO NOT LIST EVERYTHING: If the user asks what we sell, DO NOT read the whole inventory. Just mention unique categories.
+3. NEVER invent new products. Only mention what is in the list above.
+4. Use plain text only (no asterisks, no bullet points, no bold text)."""
     try:
         chat_completion = client.chat.completions.create(
             messages=[
@@ -112,11 +117,10 @@ Lekin dhyan rahe:
                 {"role": "user", "content": user_message}
             ],
             model="llama-3.1-8b-instant",
-            temperature=0.7
+            temperature=0.3 
         )
+        
         return chat_completion.choices[0].message.content
     except Exception as e:
-        # Yeh line terminal mein exact error chhap degi
         print(f"\n🔥🔥 GROQ API ERROR: {e} 🔥🔥\n")
-        
         return "Ek minute, main check karke batata hoon 🙏" if lang == "hi" else "One minute, let me check and get back to you 🙏"
