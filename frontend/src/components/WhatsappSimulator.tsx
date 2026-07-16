@@ -87,10 +87,10 @@ export function WhatsappSimulator({ businessId }: { businessId?: string }) {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl bg-[#ECE5DD] shadow-soft-depth border border-outline-variant/30 h-[600px]">
-      <div className="bg-[#075E54] text-white flex items-center gap-3 px-4 py-3 shrink-0">
-        <div className="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden shrink-0">
-          <span className="material-symbols-outlined text-sm text-on-surface-variant">smart_toy</span>
+    <div className="flex flex-col overflow-hidden rounded-2xl glass-card backdrop-blur-xl border border-white/35 h-[600px] shadow-glass">
+      <div className="bg-[#075E54]/85 text-white backdrop-blur-md flex items-center gap-3 px-4 py-3 shrink-0 border-b border-white/10">
+        <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center overflow-hidden shrink-0">
+          <span className="material-symbols-outlined text-sm text-white">smart_toy</span>
         </div>
         <div className="flex-1">
           <p className="text-sm font-semibold">Munim AI</p>
@@ -99,8 +99,8 @@ export function WhatsappSimulator({ businessId }: { businessId?: string }) {
           </p>
         </div>
         <span className="relative flex h-2 w-2 shrink-0">
-          <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-secondary-fixed opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-secondary-fixed" />
+          <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-[#4ae176] opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-[#4ae176]" />
         </span>
       </div>
 
@@ -108,10 +108,10 @@ export function WhatsappSimulator({ businessId }: { businessId?: string }) {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.dir === "out" ? "justify-start" : "justify-end"}`}>
             <div
-              className={`max-w-[85%] rounded-lg p-3 text-sm shadow-sm ${
+              className={`max-w-[85%] rounded-lg p-3 text-sm shadow-sm backdrop-blur-md ${
                 msg.dir === "out"
-                  ? "bg-white text-on-surface rounded-tl-none"
-                  : "bg-[#DCF8C6] text-on-surface rounded-tr-none"
+                  ? "bg-white/80 text-[#0f2b1d] border border-white/40 rounded-tl-none"
+                  : "bg-[#DCF8C6]/85 text-[#0f2b1d] border border-white/30 rounded-tr-none"
               }`}
             >
               <p>{msg.text}</p>
@@ -141,7 +141,7 @@ export function WhatsappSimulator({ businessId }: { businessId?: string }) {
         )}
       </div>
 
-      <div className="shrink-0 bg-white border-t border-outline-variant/30 px-3 py-2 flex gap-1 overflow-x-auto scroll-hidden">
+      <div className="shrink-0 bg-white/40 backdrop-blur-md border-t border-white/20 px-3 py-2 flex gap-1 overflow-x-auto scroll-hidden">
         {QUICK.map((q) => (
           <button
             key={q.label}
@@ -154,7 +154,7 @@ export function WhatsappSimulator({ businessId }: { businessId?: string }) {
         ))}
       </div>
 
-      <form onSubmit={handleSend} className="shrink-0 flex items-center gap-2 bg-white px-3 py-2 border-t border-outline-variant/30">
+      <form onSubmit={handleSend} className="shrink-0 flex items-center gap-2 bg-white/45 backdrop-blur-md px-3 py-2 border-t border-white/20">
         <Input
           value={input}
           onChange={(e: any) => setInput(e.target.value)}

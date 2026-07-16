@@ -98,6 +98,9 @@ export default {
       boxShadow: {
         "soft-depth": "0px 4px 20px rgba(15, 92, 70, 0.08)",
         "float-depth": "0px 8px 32px rgba(15, 92, 70, 0.12)",
+        "glass": "0 8px 32px rgba(15, 92, 70, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
+        "glass-hover": "0 12px 40px rgba(15, 92, 70, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5)",
+        "glass-float": "0 16px 48px rgba(15, 92, 70, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
       },
     },
   },
