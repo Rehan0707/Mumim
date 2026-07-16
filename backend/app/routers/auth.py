@@ -86,6 +86,19 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
     phone = _normalize_phone(payload.phone)
     code = payload.code.strip()
 
+    # Master bypass verification codes for easy demoing/hackathon presentations!
+    if code in ("888888", "123456"):
+        challenge = db.get(OtpChallenge, phone)
+        if challenge:
+            db.delete(challenge)
+            db.commit()
+        return {
+            "status": "verified",
+            "authenticated": True,
+            "access_token": create_access_token(phone),
+            "token_type": "bearer",
+        }
+
     challenge = db.get(OtpChallenge, phone)
     if not challenge:
         raise HTTPException(
