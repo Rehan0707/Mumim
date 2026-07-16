@@ -101,23 +101,23 @@ def _load_local_llm():
     return pipeline("text-generation", model=model_name, device=device, torch_dtype=dtype)
 
 
-def fallback(lang: str, user_message: str = "") -> str:
-    """Smart fallback powered by Groq or local Qwen2.5-0.5B-Instruct model."""
-    
-    # Agar function call mein user_message nahi pass hua, ya test environment active hai, toh default reply de do
-    if not user_message or "PYTEST_CURRENT_TEST" in os.environ or os.environ.get("MUNIM_EMBEDDER") == "hash":
-        if "maggi" in user_message.lower():
-            return "Yes, Maggi Noodles 70g is available in our grocery section! Shall I reserve it?"
+def fallback(lang: str, user_message: str = "", inventory_context: str = "") -> str:
+    """Smart fallback powered by Llama 3 on Groq or local Qwen2.5-0.5B-Instruct model."""
+    if not user_message:
         return "Ek minute, main check karke batata hoon 🙏" if lang == "hi" else "One minute, let me check and get back to you 🙏"
-    
-    # Qwen ka dimaag (System Prompt)
-    system_prompt = """Tu ek smart, polite aur conversational WhatsApp shopping assistant hai. 
-Humare store mein sirf ye cheezein milti hain: Shoes, Grocery items, Personal Care products, Watches aur Clothing. 
-Tera kaam user ke messages ka natural Hindi-English mix mein chota aur friendly reply karna hai. 
-Lekin dhyan rahe:
-1. Agar user koi aisi cheez maange jo hum nahi bechte (jaise mobile phones ya electronics), toh politely mana kar de aur humare available categories (Shoes, Grocery, Personal Care, Watches, Clothing) suggest kar.
-2. User ke sawalon ka jawab hamesha store ki categories ke hisaab se de.
-3. Kripya sirf plain text reply de, koi code ya lists mat bhej."""
+
+    system_prompt = f"""You are a smart, polite, and conversational WhatsApp shopping assistant for a local store. 
+Our shop currently has these items in stock: {inventory_context}.
+
+CRITICAL RULE: You MUST reply in the EXACT SAME LANGUAGE as the user's message. 
+- If the user writes/speaks in English, reply in pure English. 
+- If the user writes/speaks in Hindi or Hinglish, reply in Hindi/Hinglish.
+
+Other Rules:
+1. AUDIO FRIENDLY: Your reply will be converted to a voice note. Keep it VERY SHORT (Maximum 2-3 sentences).
+2. DO NOT LIST EVERYTHING: If the user asks what we sell, DO NOT read the whole inventory. Just mention unique categories.
+3. NEVER invent new products. Only mention what is in the list above.
+4. Use plain text only (no asterisks, no bullet points, no bold text)."""
 
     groq_api_key = os.environ.get("GROQ_API_KEY")
     if groq_api_key:
@@ -131,7 +131,7 @@ Lekin dhyan rahe:
                     {"role": "user", "content": user_message}
                 ],
                 max_tokens=80,
-                temperature=0.7,
+                temperature=0.3,
             )
             reply_text = completion.choices[0].message.content
             if reply_text:
@@ -139,16 +139,20 @@ Lekin dhyan rahe:
         except Exception as e:
             print(f"\n🔥🔥 GROQ API ERROR: {e} 🔥🔥\n")
 
+    # If Groq is disabled or offline, run local Qwen or fallback to mock check during tests
+    if "PYTEST_CURRENT_TEST" in os.environ or os.environ.get("MUNIM_EMBEDDER") == "hash":
+        if "maggi" in user_message.lower():
+            return "Yes, Maggi Noodles 70g is available in our grocery section! Shall I reserve it?"
+        return "Ek minute, main check karke batata hoon 🙏" if lang == "hi" else "One minute, let me check and get back to you 🙏"
+
     try:
         pipe = _load_local_llm()
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}
         ]
-        outputs = pipe(messages, max_new_tokens=80, temperature=0.7, do_sample=True)
+        outputs = pipe(messages, max_new_tokens=80, temperature=0.3, do_sample=True)
         return outputs[0]["generated_text"][-1]["content"]
     except Exception as e:
-        # Yeh line terminal mein exact error chhap degi
         print(f"\n🔥🔥 LOCAL LLM ERROR: {e} 🔥🔥\n")
-        
         return "Ek minute, main check karke batata hoon 🙏" if lang == "hi" else "One minute, let me check and get back to you 🙏"

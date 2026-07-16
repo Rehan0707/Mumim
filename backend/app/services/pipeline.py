@@ -20,7 +20,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from ..config import settings
-from ..models import Business, Message, Order, PendingReservation
+from ..models import Business, Message, Order, PendingReservation, Product
 from . import crm, nlu, orders, payments, reply, search, vision
 
 PENDING_RESERVATION_TTL = timedelta(minutes=30)
@@ -129,7 +129,24 @@ def handle_message(
         text = text or "[voice note]"  # real IndicWhisper transcript swaps in here
 
     text = (text or "").strip()
-    result = nlu.parse(text)
+    # 1. NLU se dictionary output nikalo
+    parsed_data = nlu.parse(text)
+    
+    # 2. Ek choti si dummy class banao taaki purana code (result.intent, result.raw) na fate
+    class NLUResponse:
+        def __init__(self, intent, lang, raw, entities):
+            self.intent = intent
+            self.lang = lang
+            self.raw = raw
+            self.entities = entities
+            
+    # 3. Dictionary ka data object mein daal do
+    result = NLUResponse(
+        intent=parsed_data.get("intent", "UNKNOWN"),
+        lang=parsed_data.get("lang", "en"),
+        raw=text,
+        entities=parsed_data.get("entities", {})
+    )
     lang = result.lang
 
     _log_message(db, business.id, customer.id, "in", input_type, text, result.intent, lang, media_url)
@@ -160,9 +177,37 @@ def _dispatch(db, business, customer, result, events, cards) -> str:
         return reply.last_order(orders.serialize(last) if last else None, lang)
 
     if intent == "COMPLAINT" or intent == "UNKNOWN":
-        # Ab hum Llama 3 ko user ka original message (result.raw) bhej rahe hain
-        return reply.fallback(lang, user_message=result.raw)
+        _PENDING.pop(key, None)
+        # Database se ACTIVE products uthao (taaki out-of-stock ya hidden items na dikhe)
+        available_products = db.query(Product).filter(
+            Product.business_id == business.id,
+            Product.is_active == True
+        ).limit(20).all()
+        
+        if available_products:
+            details = []
+            for p in available_products:
+                # Agar category ya brand None hai toh usko handle karo
+                cat = p.category or "General"
+                brand = f" ({p.brand})" if p.brand else ""
+                stock = f"In Stock ({p.stock_qty})" if p.stock_qty > 0 else "Out of Stock"
+                
+                # Attributes (jaise size/color) ko extract karke string banao
+                attrs = ""
+                if p.attributes:
+                    # Example: {'size': 'M, L', 'color': 'White'} -> "size: M, L, color: White"
+                    attr_list = [f"{k}: {v}" for k, v in p.attributes.items()]
+                    attrs = f" | Details: {', '.join(attr_list)}"
 
+                # Final line jo LLM padhega
+                details.append(f"- {p.name}{brand} | Category: {cat} | Price: ₹{p.price} | {stock}{attrs}")
+            
+            inventory_context = "\n".join(details)
+        else:
+            inventory_context = "abhi dukan mein naya stock aana baaki hai"
+            
+        return reply.fallback(lang, user_message=result.raw, inventory_context=inventory_context)
+     
     if intent == "ORDER":
         # Confirmation of a pending reserve? -> place the order.
         pending = _get_pending(db, business.id, customer.whatsapp_no)

@@ -25,17 +25,19 @@ log = logging.getLogger("munim.whatsapp")
 TWILIO_API = "https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
 
 
-def send_message(to: str, body: str) -> dict:
+# 👈 YAHAN 'media_url' parameter add kiya hai
+def send_message(to: str, body: str, media_url: str = None) -> dict:
     """Send a WhatsApp message to `to`. Returns a receipt dict."""
     if settings.WHATSAPP_MODE != "twilio":
         if settings.is_production and not settings.allow_production_mocks:
             raise RuntimeError("mock WhatsApp sender is disabled in production")
-        log.info("[mock-whatsapp] -> %s: %s", to, (body or "").replace("\n", " ⏎ "))
-        return {"mode": "mock", "to": to, "status": "logged"}
-    return _send_twilio(to, body)
+        log.info("[mock-whatsapp] -> %s: %s (media: %s)", to, (body or "").replace("\n", " ⏎ "), media_url)
+        return {"mode": "mock", "to": to, "status": "logged", "media": media_url}
+    return _send_twilio(to, body, media_url)
 
 
-def _send_twilio(to: str, body: str) -> dict:
+# 👈 YAHAN BHI 'media_url' handle kiya hai
+def _send_twilio(to: str, body: str, media_url: str = None) -> dict:
     sid, token, sender = (
         settings.TWILIO_ACCOUNT_SID,
         settings.TWILIO_AUTH_TOKEN,
@@ -57,6 +59,9 @@ def _send_twilio(to: str, body: str) -> dict:
             params["ContentVariables"] = json.dumps({"1": otp_code})
     else:
         params["Body"] = body
+
+    if media_url:
+        params["MediaUrl"] = media_url
 
     data = urllib.parse.urlencode(params).encode()
     req = urllib.request.Request(TWILIO_API.format(sid=sid), data=data, method="POST")
