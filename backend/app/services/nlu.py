@@ -1,15 +1,34 @@
+from __future__ import annotations
+
 import os
 import json
+import re
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 from groq import Groq
 
 # Groq client initialize kar rahe hain
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+api_key = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=api_key) if api_key else None
 
-def parse(user_message: str) -> dict:
+# --- keyword lexicons (English + common Hinglish/Marathi romanizations) ---
+_GREETING = {"hi", "hello", "hey", "namaste", "namaskar", "hii"}
+_QUERY = {"available", "avail", "hai", "milega", "milta", "price", "kitna", "kitne",
+          "rate", "stock", "size", "kya", "do you have", "have", "dikhao", "show", "details"}
+
+_ORDER = {"order", "buy", "chahiye", "chahie", "de do", "dedo", "reserve", "book",
+          "confirm", "haan", "haa", "yes", "ok", "okay", "karun", "karu", "lelo", "want", "khareedna", "kar do", "kardo", "yes", "haan", "reserve it"}
+_LAST_ORDER = {"last order", "previous", "pichla", "history", "purana", "last time"}
+_COMPLAINT = {"complaint", "problem", "issue", "kharab", "defective", "wrong", "return", "refund"}
+
+
+def parse_llm(user_message: str) -> dict:
     """
     True AI Intent & Language Router using Llama-3 JSON mode.
     Returns: {"intent": "QUERY", "lang": "hi"}
     """
+    if not client:
+        return {"intent": "UNKNOWN", "lang": "en"}
     
     # Prompt ko strictly JSON output dene ke liye train kiya gaya hai
     system_prompt = """You are the NLU (Natural Language Understanding) brain for a WhatsApp shopping bot.
@@ -91,6 +110,17 @@ def _score(text: str, lexicon: set) -> int:
 def parse(text: str, lang: Optional[str] = None) -> NLUResult:
     text = (text or "").strip()
     lang = lang or detect_lang(text)
+    
+    if client and "PYTEST_CURRENT_TEST" not in os.environ and os.environ.get("MUNIM_EMBEDDER") != "hash":
+        try:
+            llm_res = parse_llm(text)
+            intent = llm_res.get("intent", "UNKNOWN").upper()
+            lang = llm_res.get("lang", lang).lower()
+            entities = extract_entities(text)
+            return NLUResult(intent=intent, lang=lang, confidence=0.9, entities=entities, raw=text)
+        except Exception as e:
+            print(f"⚠️ Groq NLU failed: {e}. Falling back to rule-based lexicon.")
+
     lowered = text.lower()
 
     scores = {

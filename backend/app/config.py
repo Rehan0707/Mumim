@@ -28,13 +28,20 @@ def _bool(name: str, default: bool = False) -> bool:
 
 def _resolve_db_url(url: str) -> str:
     """Anchor a relative sqlite path to the backend dir so the same DB file is used
-    no matter the working directory (seed, uvicorn, and ml/ scripts all agree)."""
+    no matter the working directory (seed, uvicorn, and ml/ scripts all agree).
+    Also normalizes PostgreSQL schemes for the psycopg (v3) driver."""
     prefix = "sqlite:///"
     if url.startswith(prefix) and not url.startswith("sqlite:////"):
         rel = url[len(prefix):]
         backend_dir = Path(__file__).resolve().parent.parent
         abs_path = (backend_dir / rel).resolve()
         return f"sqlite:///{abs_path}"
+        
+    if url.startswith("postgres://"):
+        url = "postgresql+psycopg://" + url[len("postgres://"):]
+    elif url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+        
     return url
 
 

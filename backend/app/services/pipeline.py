@@ -129,24 +129,7 @@ def handle_message(
         text = text or "[voice note]"  # real IndicWhisper transcript swaps in here
 
     text = (text or "").strip()
-    # 1. NLU se dictionary output nikalo
-    parsed_data = nlu.parse(text)
-    
-    # 2. Ek choti si dummy class banao taaki purana code (result.intent, result.raw) na fate
-    class NLUResponse:
-        def __init__(self, intent, lang, raw, entities):
-            self.intent = intent
-            self.lang = lang
-            self.raw = raw
-            self.entities = entities
-            
-    # 3. Dictionary ka data object mein daal do
-    result = NLUResponse(
-        intent=parsed_data.get("intent", "UNKNOWN"),
-        lang=parsed_data.get("lang", "en"),
-        raw=text,
-        entities=parsed_data.get("entities", {})
-    )
+    result = nlu.parse(text)
     lang = result.lang
 
     _log_message(db, business.id, customer.id, "in", input_type, text, result.intent, lang, media_url)

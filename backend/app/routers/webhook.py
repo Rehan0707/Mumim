@@ -9,7 +9,6 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from gtts import gTTS
 
 from ..config import settings
 from ..db import get_db
@@ -87,14 +86,21 @@ async def _run(db: Session, business: Business, msg: InboundMessage, base_url: s
         
         import asyncio
         def generate_tts():
+            try:
+                from gtts import gTTS
+            except ImportError:
+                print("⚠️ gTTS not installed. Skipping voice reply generation.")
+                return
             tts = gTTS(text=reply_text, lang=bot_lang, slow=False)
             tts.save(filepath)
             
         await asyncio.to_thread(generate_tts)
         
-        reply_media_url = f"{base_url}static/{filename}"
-        out["media_url"] = reply_media_url
-        print(f"🔊 Bot generated voice reply: {reply_media_url} (Language: {bot_lang})")
+        # Only set reply_media_url if the file was actually written (gTTS was available)
+        if os.path.exists(filepath):
+            reply_media_url = f"{base_url}static/{filename}"
+            out["media_url"] = reply_media_url
+            print(f"🔊 Bot generated voice reply: {reply_media_url} (Language: {bot_lang})")
 
     if send_outbound:
         try:

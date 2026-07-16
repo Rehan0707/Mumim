@@ -42,8 +42,11 @@ TAGS_METADATA = [
 async def lifespan(app: FastAPI):
     if not settings.DATABASE_URL.startswith("sqlite"):
         from sqlalchemy import text
-        with engine.begin() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        except Exception as exc:
+            log.warning("Could not run CREATE EXTENSION vector: %s. Continuing startup.", exc)
     Base.metadata.create_all(bind=engine)
     
     # Auto-seed if database is empty (Render deployment)
