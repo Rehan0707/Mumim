@@ -71,7 +71,10 @@ def send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
 
     try:
         receipt = whatsapp.send_message(phone, message_text)
-        return {"status": "sent", "mode": receipt.get("mode")}
+        res = {"status": "sent", "mode": receipt.get("mode")}
+        if receipt.get("mode") == "mock" or settings.APP_ENV == "development":
+            res["debug_code"] = otp_code
+        return res
     except Exception as exc:
         log.error("Failed to send WhatsApp OTP: %s", exc)
         raise HTTPException(

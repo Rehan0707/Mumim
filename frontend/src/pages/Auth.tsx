@@ -12,6 +12,7 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [debugOtp, setDebugOtp] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sandboxKeyword, setSandboxKeyword] = useState("double-john");
@@ -20,11 +21,13 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
 
   async function handleSendOtp() {
     if (!phone.trim()) return;
-    setLoading(true);
-    setError(null);
+    setDebugOtp(null);
     try {
       const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
-      await api.sendOtp(formattedPhone);
+      const res = await api.sendOtp(formattedPhone);
+      if (res.debug_code) {
+        setDebugOtp(res.debug_code);
+      }
       setStep("verify");
     } catch (err: any) {
       setError("Failed to send verification code. Please check your connection.");
@@ -160,6 +163,11 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
                   className="text-center font-numeral-lg text-numeral-lg tracking-[0.5em]"
                   disabled={loading}
                 />
+                {debugOtp && (
+                  <div className="mt-2 text-sm text-emerald-800 bg-emerald-50 border border-emerald-200/50 rounded-xl p-3 text-center font-medium">
+                    🔧 [Dev Mode] Verification OTP: <span className="font-mono text-base font-bold bg-white px-2.5 py-0.5 rounded border border-emerald-300 select-all">{debugOtp}</span>
+                  </div>
+                )}
               </div>
 
               {error && (
