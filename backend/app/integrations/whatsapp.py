@@ -67,10 +67,22 @@ def _send_twilio(to: str, body: str, media_url: str = None) -> dict:
     req = urllib.request.Request(TWILIO_API.format(sid=sid), data=data, method="POST")
     auth = base64.b64encode(f"{sid}:{token}".encode()).decode()
     req.add_header("Authorization", f"Basic {auth}")
-    with urllib.request.urlopen(req, timeout=10) as resp:  # pragma: no cover - network
-        payload = json.loads(resp.read())
-    log.info("[twilio] sent sid=%s to=%s", payload.get("sid"), to)
-    return {"mode": "twilio", "to": to, "status": "sent", "sid": payload.get("sid")}
+    import urllib.error
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            payload = json.loads(resp.read())
+        log.info("[twilio] sent sid=%s to=%s", payload.get("sid"), to)
+        return {"mode": "twilio", "to": to, "status": "sent", "sid": payload.get("sid")}
+    except urllib.error.HTTPError as err:
+        try:
+            err_body = err.read().decode("utf-8")
+            err_data = json.loads(err_body)
+            msg = err_data.get("message", err_body)
+            code = err_data.get("code", "")
+            more_info = err_data.get("more_info", "")
+            raise RuntimeError(f"Twilio Error {code}: {msg} {more_info}".strip())
+        except Exception:
+            raise RuntimeError(f"Twilio API returned HTTP {err.code}: {err.reason}")
 
 
 def verify_twilio_signature(url: str, form: dict, signature: str) -> bool:
