@@ -77,10 +77,14 @@ def verify_twilio_signature(url: str, form: dict, signature: str) -> bool:
     """Validate Twilio's X-Twilio-Signature header for inbound webhooks."""
     token = settings.TWILIO_AUTH_TOKEN
     if not token or not signature:
+        log.warning("Twilio signature verification failed: token or signature missing")
         return False
     pieces = [url]
     for key in sorted(form):
         pieces.append(f"{key}{form[key]}")
     digest = hmac.new(token.encode("utf-8"), "".join(pieces).encode("utf-8"), hashlib.sha1).digest()
     expected = base64.b64encode(digest).decode("ascii")
-    return hmac.compare_digest(expected, signature)
+    matched = hmac.compare_digest(expected, signature)
+    if not matched:
+        log.warning("Twilio signature mismatch! Expected: %s, Sent: %s, URL: %s", expected, signature, url)
+    return matched

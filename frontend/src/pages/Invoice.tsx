@@ -751,7 +751,7 @@ function ScanSupplierTab({
         type="file"
         accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
         onChange={handleFileChange}
-        className="hidden"
+        className="absolute opacity-0 pointer-events-none w-0 h-0"
       />
 
       <h3 className="font-bold text-slate-800 mb-1">Onboard Stock via Invoice / Bill photo</h3>

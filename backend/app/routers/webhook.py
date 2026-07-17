@@ -134,7 +134,17 @@ async def inbound(request: Request, db: Session = Depends(get_db)):
         if settings.WHATSAPP_MODE == "twilio" and settings.is_production:
             form_dict = {k: str(v) for k, v in form.items()}
             base_url_setting = settings.PUBLIC_BASE_URL.rstrip("/") if settings.PUBLIC_BASE_URL else ""
-            signed_url = f"{base_url_setting}{request.url.path}" if base_url_setting else str(request.url)
+            if base_url_setting:
+                signed_url = f"{base_url_setting}{request.url.path}"
+            else:
+                # Dynamically reconstruct the public URL from headers (handles proxying/Vercel/ngrok)
+                host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+                proto = request.headers.get("x-forwarded-proto") or "https"
+                if host:
+                    signed_url = f"{proto}://{host}{request.url.path}"
+                else:
+                    signed_url = str(request.url).replace("http://", "https://")
+            
             signature = request.headers.get("X-Twilio-Signature", "")
             if not whatsapp.verify_twilio_signature(signed_url, form_dict, signature):
                 raise HTTPException(401, "invalid Twilio webhook signature")
