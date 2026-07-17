@@ -27,7 +27,7 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
       await api.sendOtp(formattedPhone);
       setStep("verify");
     } catch (err: any) {
-      setError("Failed to send verification code. Please check your connection.");
+      setError(err.message || "Failed to send verification code. Please check your connection.");
     } finally {
       setLoading(false);
     }

@@ -32,7 +32,14 @@ function headers(json = false): HeadersInit {
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API}${path}`, { headers: headers() });
-  if (!res.ok) throw new Error(`${res.status} ${path}`);
+  if (!res.ok) {
+    let msg = `${res.status} ${path}`;
+    try {
+      const errData = await res.json();
+      msg = errData.error?.detail || errData.detail || msg;
+    } catch {}
+    throw new Error(msg);
+  }
   return res.json();
 }
 
@@ -42,7 +49,14 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: headers(true),
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`${res.status} ${path}`);
+  if (!res.ok) {
+    let msg = `${res.status} ${path}`;
+    try {
+      const errData = await res.json();
+      msg = errData.error?.detail || errData.detail || msg;
+    } catch {}
+    throw new Error(msg);
+  }
   return res.json();
 }
 
