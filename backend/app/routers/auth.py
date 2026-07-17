@@ -72,17 +72,16 @@ def send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
     try:
         receipt = whatsapp.send_message(phone, message_text)
         res = {"status": "sent", "mode": receipt.get("mode")}
-        if receipt.get("mode") == "mock" or settings.APP_ENV == "development":
+        # Only expose OTP in local dev mock mode — NEVER in production
+        if receipt.get("mode") == "mock" and not settings.is_production:
             res["debug_code"] = otp_code
         return res
     except Exception as exc:
-        log.warning("WhatsApp OTP delivery failed: %s. Falling back to returning OTP in API response.", exc)
-        return {
-            "status": "sent",
-            "mode": "fallback",
-            "debug_code": otp_code,
-            "warning": f"WhatsApp delivery failed: {exc}. Using fallback verification."
-        }
+        log.error("WhatsApp OTP delivery failed for %s: %s", phone, exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Failed to send verification code via WhatsApp. Please try again.",
+        )
 
 
 @router.post("/auth/verify-otp")
