@@ -105,7 +105,7 @@ export const api = {
   sendWhatsapp: (payload: { from_no: string; type: string; text?: string; media_url?: string; name?: string; business_id?: string }) =>
     post<{ reply: string; intent: string; lang: string; matches?: MatchCard[] }>(`/webhook/whatsapp`, payload),
   // Real OTP authentication
-  sendOtp: (phone: string) => post<{ status: string; mode?: string }>(`/auth/send-otp`, { phone }),
+  sendOtp: (phone: string) => post<{ status: string; mode?: string; debug_code?: string }>(`/auth/send-otp`, { phone }),
   verifyOtp: (phone: string, code: string) =>
     post<{ status: string; authenticated: boolean; access_token: string; token_type: string }>(`/auth/verify-otp`, { phone, code }),
   // Product actions
