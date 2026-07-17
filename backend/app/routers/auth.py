@@ -76,15 +76,12 @@ def send_otp(payload: SendOtpRequest, db: Session = Depends(get_db)):
             res["debug_code"] = otp_code
         return res
     except Exception as exc:
-        sid_debug = f"{settings.TWILIO_ACCOUNT_SID[:5]}...{settings.TWILIO_ACCOUNT_SID[-5:]} (len={len(settings.TWILIO_ACCOUNT_SID)})" if settings.TWILIO_ACCOUNT_SID else "empty"
-        token_debug = f"len={len(settings.TWILIO_AUTH_TOKEN)}" if settings.TWILIO_AUTH_TOKEN else "empty"
-        from_debug = settings.TWILIO_WHATSAPP_FROM or "empty"
         log.warning("WhatsApp OTP delivery failed: %s. Falling back to returning OTP in API response.", exc)
         return {
             "status": "sent",
             "mode": "fallback",
             "debug_code": otp_code,
-            "warning": f"WhatsApp delivery failed: {exc}. Config: SID={sid_debug}, Token={token_debug}, From={from_debug}. Using fallback verification."
+            "warning": f"WhatsApp delivery failed: {exc}. Using fallback verification."
         }
 
 
