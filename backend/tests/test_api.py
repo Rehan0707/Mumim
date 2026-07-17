@@ -171,7 +171,7 @@ def test_auth_otp_flow(client, monkeypatch):
 
 def test_auth_has_no_master_bypass(client):
     r = client.post("/auth/verify-otp", json={"phone": "9812345601", "code": "888888"})
-    assert r.status_code == 200
+    assert r.status_code == 400
 
 
 def test_webhook_query_param_routing(client, db):

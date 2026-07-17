@@ -181,14 +181,6 @@ export default function Landing({
 
         {/* content */}
         <div className="relative z-10 text-center max-w-5xl mx-auto px-6 md:px-12 pt-32 pb-24">
-          {/* eyebrow */}
-          <div className="reveal-on-scroll mb-8">
-            <span className="inline-flex items-center gap-2 bg-[#059669]/[0.08] backdrop-blur-sm border border-[#059669]/[0.15] text-[#0f2b1d]/70 text-xs font-medium px-4 py-2 rounded-full tracking-wide uppercase">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-breathe" />
-              WhatsApp-First AI for Indian Shops
-            </span>
-          </div>
-
           {/* tagline */}
           <h1
             className="reveal-on-scroll font-display text-[#0f2b1d] text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold leading-[0.95] mb-8"

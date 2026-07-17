@@ -345,7 +345,7 @@ function Dashboard({ session, page, setPage, onSignOut, onLanding }: DashboardPr
                 {page === "home" && <Home bid={business.id} refreshKey={refreshKey} feed={feed} />}
                 {page === "inventory" && <Inventory bid={business.id} refreshKey={refreshKey} highlight={highlight} />}
                 {page === "orders" && <Orders bid={business.id} business={business} refreshKey={refreshKey} onChange={refresh} />}
-                {page === "invoice" && <Invoice bid={business.id} />}
+                {page === "invoice" && <Invoice bid={business.id} business={business} />}
                 {page === "crm" && <CRM bid={business.id} refreshKey={refreshKey} />}
                 {page === "analytics" && (
                   <Suspense fallback={<Card className="p-8 text-center text-on-surface-variant">Loading analytics...</Card>}>

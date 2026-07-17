@@ -26,6 +26,116 @@ export function WhatsappSimulator({ businessId }: { businessId?: string }) {
   const [busy, setBusy] = useState(false);
   const [waMode, setWaMode] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<any>(null);
+
+  // Stop timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  async function startRecording() {
+    if (busy || isRecording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      recorderRef.current = recorder;
+      chunksRef.current = [];
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
+        stream.getTracks().forEach((track) => track.stop());
+        
+        setBusy(true);
+        const userMsg: ChatMsg = { dir: "in", text: "🎤 Voice note (transcribing...)", kind: "voice" };
+        setMessages((m) => [...m, userMsg]);
+
+        try {
+          const sttRes = await api.transcribeAudio(audioBlob);
+          const transcript = sttRes.text;
+
+          setMessages((m) => {
+            const updated = [...m];
+            if (updated.length > 0) {
+              updated[updated.length - 1] = {
+                dir: "in",
+                text: `🎤 Voice: "${transcript}"`,
+                kind: "voice"
+              };
+            }
+            return updated;
+          });
+
+          const res = await api.sendWhatsapp({
+            from_no: customer.from_no,
+            type: "voice",
+            text: transcript,
+            business_id: businessId
+          });
+
+          const replyMsg: ChatMsg = {
+            dir: "out",
+            text: res.reply || "Done!",
+            cards: res.matches
+          };
+
+          setTimeout(() => {
+            setMessages((m) => [...m, replyMsg]);
+            setBusy(false);
+          }, 600 + Math.random() * 500);
+
+        } catch (err) {
+          console.error("STT/WhatsApp error:", err);
+          setMessages((m) => {
+            const updated = [...m];
+            if (updated.length > 0) {
+              updated[updated.length - 1] = {
+                dir: "in",
+                text: `🎤 Voice note (transcription failed)`,
+                kind: "voice"
+              };
+            }
+            return updated;
+          });
+          const errMsg = "⚠️ Failed to process voice note.";
+          setMessages((m) => [...m, { dir: "out", text: errMsg }]);
+          setBusy(false);
+        }
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      timerRef.current = setInterval(() => {
+        setRecordingDuration((d) => d + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      alert("Could not access microphone. Please ensure microphone permissions are granted.");
+    }
+  }
+
+  function stopRecording() {
+    if (!isRecording || !recorderRef.current) return;
+    recorderRef.current.stop();
+    setIsRecording(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -155,20 +265,49 @@ export function WhatsappSimulator({ businessId }: { businessId?: string }) {
       </div>
 
       <form onSubmit={handleSend} className="shrink-0 flex items-center gap-2 bg-white/45 backdrop-blur-md px-3 py-2 border-t border-white/20">
-        <Input
-          value={input}
-          onChange={(e: any) => setInput(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-2 text-sm outline-none focus:border-primary-container"
-          disabled={busy}
-        />
-        <Button
-          type="submit"
-          disabled={busy || !input.trim()}
-          className="min-h-[40px] min-w-[40px] rounded-xl bg-primary-container text-white flex items-center justify-center disabled:opacity-50"
-        >
-          <span className="material-symbols-outlined text-sm">send</span>
-        </Button>
+        {isRecording ? (
+          <div className="flex-1 flex items-center justify-between bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-sm text-red-600 animate-pulse">
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping" />
+              Recording... {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, "0")}
+            </span>
+            <button
+              type="button"
+              onClick={stopRecording}
+              className="text-xs font-semibold uppercase bg-red-600 text-white rounded-lg px-3 py-1 hover:bg-red-700 transition-colors"
+            >
+              Stop & Send
+            </button>
+          </div>
+        ) : (
+          <>
+            <Input
+              value={input}
+              onChange={(e: any) => setInput(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-1 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-2 text-sm outline-none focus:border-primary-container"
+              disabled={busy}
+            />
+            
+            <button
+              type="button"
+              onClick={startRecording}
+              disabled={busy}
+              className="min-h-[40px] min-w-[40px] rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors disabled:opacity-50"
+              title="Record voice note"
+            >
+              <span className="material-symbols-outlined text-sm">mic</span>
+            </button>
+
+            <Button
+              type="submit"
+              disabled={busy || !input.trim()}
+              className="min-h-[40px] min-w-[40px] rounded-xl bg-primary-container text-white flex items-center justify-center disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-sm">send</span>
+            </Button>
+          </>
+        )}
       </form>
     </div>
   );

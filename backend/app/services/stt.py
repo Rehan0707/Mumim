@@ -1,6 +1,7 @@
 import logging
 import os
 import tempfile
+import asyncio
 from urllib.parse import parse_qs, urlparse
 import requests
 from ..config import settings
@@ -23,6 +24,10 @@ def transcribe(audio_url: str) -> str:
     # First check for mock hint
     hint = _hint_from_url(audio_url)
     
+    # If no audio_url, return empty or fallback
+    if not audio_url:
+        return ""
+        
     groq_api_key = os.environ.get("GROQ_API_KEY")
     if not groq_api_key:
         log.info("GROQ_API_KEY not set, using mock fallback transcription.")
@@ -40,7 +45,12 @@ def transcribe(audio_url: str) -> str:
             log.info("Not a remote URL, using mock fallback: %s", audio_url)
             return hint or "don kilo tandul ani ek maggi"
             
-        response = requests.get(audio_url, timeout=30)
+        # Download with auth credentials if we are in twilio mode
+        auth_credentials = None
+        if settings.WHATSAPP_MODE == "twilio":
+            auth_credentials = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            
+        response = requests.get(audio_url, auth=auth_credentials, timeout=30)
         response.raise_for_status()
         
         # Guess extension or use .ogg/wav/mp3
@@ -69,3 +79,7 @@ def transcribe(audio_url: str) -> str:
     except Exception as exc:
         log.error("Groq Whisper transcription failed: %s. Falling back to mock.", exc)
         return hint or "don kilo tandul ani ek maggi"
+
+async def transcribe_audio_url(media_url: str) -> str:
+    """Asynchronous wrapper for transcribe, to support webhook router."""
+    return await asyncio.to_thread(transcribe, media_url)
