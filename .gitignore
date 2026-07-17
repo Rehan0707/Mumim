@@ -48,4 +48,3 @@ backend/weights/
 *vercel*.json
 .env.vercel*
 backend/static/*.mp3
-
