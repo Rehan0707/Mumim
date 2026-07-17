@@ -15,6 +15,7 @@ import hashlib
 import hmac
 import json
 import logging
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -67,7 +68,6 @@ def _send_twilio(to: str, body: str, media_url: str = None) -> dict:
     req = urllib.request.Request(TWILIO_API.format(sid=sid), data=data, method="POST")
     auth = base64.b64encode(f"{sid}:{token}".encode()).decode()
     req.add_header("Authorization", f"Basic {auth}")
-    import urllib.error
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             payload = json.loads(resp.read())
