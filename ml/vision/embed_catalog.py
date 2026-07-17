@@ -22,8 +22,8 @@ def run() -> None:
     if not fashion_clip.is_available():
         raise SystemExit("FashionCLIP deps missing — pip install -r ml/vision/requirements.txt")
 
-    from backend.app.db import SessionLocal
-    from backend.app.models import Product
+    from app.db import SessionLocal  # noqa: E402
+    from app.models import Product  # noqa: E402
 
     db = SessionLocal()
     try:

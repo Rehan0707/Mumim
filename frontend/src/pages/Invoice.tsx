@@ -27,54 +27,30 @@ type TabKey = "create" | "scan";
 
 /* ─── Main Component ─── */
 
-export function Invoice({ bid, business }: { bid: string; business?: Business | null }): JSX.Element {
+export function Invoice({ bid, business }: { bid: string; business?: Business | null }) {
   const [tab, setTab] = useState<TabKey>("create");
 
   /* ─── Shared ledger state ─── */
   const [invoices, setInvoices] = useState<ScannedInvoice[]>([
-  {
-    id: "INV-2026-001",
-    vendor: "ABC Traders",
-    date: "2026-07-12",
-    items: ["10kg Wheat Flour", "5kg Sugar"],
-    total: 12450,
-    status: "processed",
-    type: "scanned",
-  },
-  {
-    id: "INV-2026-002",
-    vendor: "Vikas Soap Co.",
-    date: "2026-07-13",
-    items: ["10 boxes Lifebuoy Soap", "5 boxes Surf Excel"],
-    total: 8200,
-    status: "processed",
-    type: "scanned",
-  },
-]);
-
-  // State for previewing an invoice from the ledger
-  const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
-  const [showInvoiceModal, setShowInvoiceModal] = useState<boolean>(false);
-
-  const handleRowClick = (inv: ScannedInvoice) => {
-    // Build a synthetic Order object to feed InvoiceModal
-    const items = inv.items.map((item, idx) => ({
-      product_id: `item-${idx}`,
-      name: item,
-      qty: 1,
-      unit_price: inv.total / inv.items.length || 0,
-    }));
-    const order: Order = {
-      id: inv.id,
-      status: "created",
-      total: inv.total,
-      customer_name: inv.vendor,
-      created_at: new Date(inv.date).toISOString(),
-      items,
-    };
-    setPreviewOrder(order);
-    setShowInvoiceModal(true);
-  };
+    {
+      id: "INV-2026-001",
+      vendor: "Sharma Distributors",
+      date: "2026-07-14",
+      items: ["5 peti Maggi", "2 bags Basmati Rice"],
+      total: 12450,
+      status: "processed",
+      type: "scanned",
+    },
+    {
+      id: "INV-2026-002",
+      vendor: "Vikas Soap Co.",
+      date: "2026-07-13",
+      items: ["10 boxes Lifebuoy Soap", "5 boxes Surf Excel"],
+      total: 8200,
+      status: "processed",
+      type: "scanned",
+    },
+  ]);
 
   const totalValue = invoices.reduce((sum, inv) => sum + inv.total, 0);
   const createdCount = invoices.filter((i) => i.type === "created").length;
@@ -171,11 +147,7 @@ export function Invoice({ bid, business }: { bid: string; business?: Business | 
             </thead>
             <tbody>
               {invoices.map((inv) => (
-                <tr
-  key={inv.id}
-  className="border-b border-slate-50 text-sm hover:bg-slate-50/50 cursor-pointer"
-  onClick={() => handleRowClick(inv)}
->
+                <tr key={inv.id} className="border-b border-slate-50 text-sm hover:bg-slate-50/50">
                   <td className="py-4 font-mono font-medium text-slate-600">{inv.id}</td>
                   <td className="py-4">
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -221,9 +193,6 @@ export function Invoice({ bid, business }: { bid: string; business?: Business | 
           </table>
         </div>
       </Card>
-      {showInvoiceModal && previewOrder && (
-        <InvoiceModal order={previewOrder} business={business ?? null} onClose={() => setShowInvoiceModal(false)} />
-      )}
     </div>
   );
 }
@@ -782,7 +751,7 @@ function ScanSupplierTab({
         type="file"
         accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
         onChange={handleFileChange}
-        className="absolute opacity-0 pointer-events-none w-0 h-0"
+        className="hidden"
       />
 
       <h3 className="font-bold text-slate-800 mb-1">Onboard Stock via Invoice / Bill photo</h3>

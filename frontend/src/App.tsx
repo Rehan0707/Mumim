@@ -306,34 +306,12 @@ function Dashboard({ session, page, setPage, onSignOut, onLanding }: DashboardPr
 
         <div className="flex-1 overflow-y-auto p-margin-mobile md:p-margin-desktop pb-[100px] md:pb-margin-desktop">
           {!business && (
-            <div className="flex items-center justify-center min-h-[60vh] max-w-5xl mx-auto">
-              <div className="glass-card w-full max-w-md p-10 flex flex-col items-center text-center rounded-2xl shadow-xl border border-slate-200/50 bg-white/75 backdrop-blur-md">
-                {/* Loader animation */}
-                <div className="relative flex items-center justify-center w-24 h-24 mb-6">
-                  {/* Pulsing ring outer */}
-                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-[#10b981]/15 animate-ping opacity-75" />
-                  {/* Spinner outer border */}
-                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-slate-100 border-t-[#059669]" />
-                  {/* Center branding/dot */}
-                  <div className="absolute w-4 h-4 rounded-full bg-[#10b981] animate-pulse" />
-                </div>
-
-                <h3 className="font-display font-bold text-slate-800 text-lg mb-2">
-                  Connecting to Munim.ai
-                </h3>
-                <p className="text-sm text-slate-500 max-w-xs mb-6 leading-relaxed">
-                  {import.meta.env.VITE_API_URL 
-                    ? "Establishing connection with the cloud server. This might take a moment if the system is starting up."
-                    : "Connecting to backend on port 8000. Please ensure the local service is running."}
-                </p>
-
-                {import.meta.env.VITE_API_URL && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-xs font-medium">
-                    <span className="material-symbols-outlined text-[14px]">info</span>
-                    <span>Cold start may take up to 1 minute</span>
-                  </div>
-                )}
-              </div>
+            <div className="max-w-5xl mx-auto">
+              <Card className="p-6 text-sm text-on-surface-variant">
+                {import.meta.env.VITE_API_URL 
+                  ? "Connecting to deployed backend... (If this is the first load, the server may take up to 1 minute to wake up)."
+                  : "Connecting to backend... make sure it is running on :8000."}
+              </Card>
             </div>
           )}
 

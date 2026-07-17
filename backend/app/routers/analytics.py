@@ -108,23 +108,12 @@ def _build_analytics(db: Session, business_id: str) -> dict:
         key=lambda x: x["qty"], reverse=True,
     )[:5]
 
-    # restock alerts (low stock) + 7-day forecast (LightGBM with moving-average fallback)
+    # restock alerts (low stock) + naive 7-day forecast (7-day avg daily revenue)
     low_stock = [{"name": p.name, "stock_qty": p.stock_qty}
                  for p in products.values() if p.is_active and p.stock_qty <= LOW_STOCK_THRESHOLD]
-    
-    import pathlib
-    import sys
-    _ROOT = pathlib.Path(__file__).resolve().parents[3]
-    if str(_ROOT) not in sys.path:
-        sys.path.insert(0, str(_ROOT))
-        
-    try:
-        from ml.forecast.forecast import predict_forecast
-        forecast = predict_forecast(db, business_id)
-    except Exception:
-        avg_daily = (sum(x["revenue"] for x in revenue_trend) / 7) if revenue_trend else 0
-        forecast = [{"date": (today + timedelta(days=i)).isoformat(), "revenue": round(avg_daily, 2)}
-                    for i in range(1, 8)]
+    avg_daily = (sum(x["revenue"] for x in revenue_trend) / 7) if revenue_trend else 0
+    forecast = [{"date": (today + timedelta(days=i)).isoformat(), "revenue": round(avg_daily, 2)}
+                for i in range(1, 8)]
 
     customers = db.query(Customer).filter(Customer.business_id == business_id).count()
 

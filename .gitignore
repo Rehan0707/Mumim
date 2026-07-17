@@ -43,8 +43,3 @@ design/**/*.mov
 backend/venv/
 backend/weights/
 .vercel
-
-# Local deployment logs, vercel envs, and generated MP3s
-*vercel*.json
-.env.vercel*
-backend/static/*.mp3

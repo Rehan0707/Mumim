@@ -152,7 +152,7 @@ def _dispatch(db, business, customer, result, events, cards) -> str:
         return reply.last_order(orders.serialize(last) if last else None, lang)
 
     if intent == "COMPLAINT" or intent == "UNKNOWN":
-        _clear_pending(db, business.id, customer.whatsapp_no)
+        _PENDING.pop(key, None)
         # Database se ACTIVE products uthao (taaki out-of-stock ya hidden items na dikhe)
         available_products = db.query(Product).filter(
             Product.business_id == business.id,
