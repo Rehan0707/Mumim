@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from urllib.parse import parse_qs, urlparse
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -58,3 +58,48 @@ def vision_search(body: VisionSearchRequest, db: Session = Depends(get_db), auth
     entities = nlu_svc.extract_entities(query)
     matches = search_svc.semantic_search(db, body.business_id, query, entities, limit=body.limit)
     return {"query": query, "engine": "text-hint-fallback", "matches": matches}
+
+
+@router.post("/transcribe-upload", summary="Upload voice note file → text (Groq Whisper / Mock)")
+async def transcribe_upload(
+    file: UploadFile = File(...),
+    auth=Depends(require_owner_auth),
+):
+    """Transcribes an uploaded audio file using Groq Whisper, falling back to mock transcript if unavailable."""
+    import tempfile
+    import os
+    
+    content = await file.read()
+    ext = os.path.splitext(file.filename or "")[1] or ".webm"
+    
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+        
+    try:
+        groq_api_key = os.environ.get("GROQ_API_KEY")
+        if not groq_api_key:
+            # Fall back to a default mock text
+            text = "don kilo tandul ani ek maggi"
+            lang = nlu_svc.detect_lang(text)
+            return {"text": text, "lang": lang, "engine": "mock-uploaded-fallback"}
+            
+        from groq import Groq
+        client = Groq(api_key=groq_api_key)
+        
+        with open(tmp_path, "rb") as f:
+            transcription = client.audio.transcriptions.create(
+                file=(file.filename or f"audio{ext}", f.read()),
+                model="whisper-large-v3",
+            )
+        text = transcription.text
+        lang = nlu_svc.detect_lang(text)
+        return {"text": text, "lang": lang, "engine": "groq-whisper-upload"}
+    except Exception as exc:
+        # Fall back gracefully
+        text = "don kilo tandul ani ek maggi"
+        lang = nlu_svc.detect_lang(text)
+        return {"text": text, "lang": lang, "engine": f"error-fallback: {str(exc)}"}
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)

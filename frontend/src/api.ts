@@ -78,6 +78,15 @@ export const api = {
   },
   bulkProducts: (bid: string, products: ScannedItem[]) =>
     post<{ created: number }>(`/products/bulk?business_id=${bid}`, { products }),
+  // Voice note upload -> transcription
+  transcribeAudio: (file: Blob | File) => {
+    const fd = new FormData();
+    fd.append("file", file, "audio.webm");
+    return fetch(`${API}/media/transcribe-upload`, { method: "POST", headers: headers(), body: fd }).then((r) => {
+      if (!r.ok) throw new Error(`${r.status}`);
+      return r.json() as Promise<{ text: string; lang: string; engine: string }>;
+    });
+  },
   // WhatsApp simulator -> webhook
   sendWhatsapp: (payload: { from_no: string; type: string; text?: string; media_url?: string; name?: string; business_id?: string }) =>
     post<{ reply: string; intent: string; lang: string; matches?: MatchCard[] }>(`/webhook/whatsapp`, payload),

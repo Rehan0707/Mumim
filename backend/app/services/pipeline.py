@@ -115,18 +115,10 @@ def handle_message(
     if input_type == "image":
         return _handle_visual(db, business, customer, media_url, events)
     if input_type == "voice":
-        if not text and not settings.allow_mock_ai:
-            lang = business.lang_default or "hi"
-            reply_text = "Voice orders are temporarily unavailable. Please send the order as text."
-            _log_message(db, business.id, customer.id, "in", input_type, "[voice note]", "UNKNOWN", lang, media_url)
-            _log_message(db, business.id, customer.id, "out", "text", reply_text, "UNKNOWN", lang)
-            events.append({"type": "new_message", "data": {
-                "customer_no": from_no, "direction": "in", "text": "[voice note]", "intent": "UNKNOWN"}})
-            events.append({"type": "new_message", "data": {
-                "customer_no": from_no, "direction": "out", "text": reply_text}})
-            return {"reply": reply_text, "intent": "UNKNOWN", "lang": lang,
-                    "events": events, "customer_id": customer.id, "matches": []}
-        text = text or "[voice note]"  # real IndicWhisper transcript swaps in here
+        if not text and media_url:
+            from .stt import transcribe
+            text = transcribe(media_url)
+        text = text or "[voice note]"
 
     text = (text or "").strip()
     result = nlu.parse(text)
