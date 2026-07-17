@@ -77,7 +77,10 @@ async def _run(db: Session, business: Business, msg: InboundMessage, base_url: s
         # Create a unique file name
         filename = f"reply_{uuid.uuid4().hex}.mp3"
         filepath = os.path.join("static", filename)
-        os.makedirs("static", exist_ok=True)
+        try:
+            os.makedirs("static", exist_ok=True)
+        except OSError:
+            pass
         
         # Determine language (default to 'hi')
         bot_lang = out.get("lang", "hi")
@@ -88,11 +91,10 @@ async def _run(db: Session, business: Business, msg: InboundMessage, base_url: s
         def generate_tts():
             try:
                 from gtts import gTTS
-            except ImportError:
-                print("⚠️ gTTS not installed. Skipping voice reply generation.")
-                return
-            tts = gTTS(text=reply_text, lang=bot_lang, slow=False)
-            tts.save(filepath)
+                tts = gTTS(text=reply_text, lang=bot_lang, slow=False)
+                tts.save(filepath)
+            except Exception as e:
+                print(f"⚠️ Voice reply generation failed: {e}")
             
         await asyncio.to_thread(generate_tts)
         

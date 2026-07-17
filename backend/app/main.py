@@ -104,7 +104,10 @@ app = FastAPI(
 )
 
 # 👈 YAHAN STATIC FILES MOUNT KIYA HAI
-os.makedirs("static", exist_ok=True)
+try:
+    os.makedirs("static", exist_ok=True)
+except OSError:
+    pass
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
