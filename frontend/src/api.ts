@@ -61,7 +61,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const api = {
-  health: () => get<{ status: string; env: string; payment_mode: string; whatsapp_mode: string }>(`/health`),
+  health: () => get<{ status: string; env: string; payment_mode: string; whatsapp_mode: string; twilio_whatsapp_from?: string }>(`/health`),
   businesses: () => get<Business[]>(`/businesses`),
   getBusiness: (bid: string) => get<Business>(`/businesses/${bid}`),
   createBusiness: (body: any) => post<Business>(`/businesses`, body),

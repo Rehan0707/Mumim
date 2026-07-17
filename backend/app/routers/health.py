@@ -22,6 +22,7 @@ def health():
         "env": settings.APP_ENV,
         "payment_mode": settings.PAYMENT_MODE,
         "whatsapp_mode": settings.WHATSAPP_MODE,
+        "twilio_whatsapp_from": settings.TWILIO_WHATSAPP_FROM,
     }
 
 

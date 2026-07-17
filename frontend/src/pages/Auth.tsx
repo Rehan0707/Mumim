@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, Card, Input } from "../components/ui";
 import { api } from "../api";
 
@@ -16,6 +16,17 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sandboxKeyword, setSandboxKeyword] = useState("double-john");
+  const [twilioFrom, setTwilioFrom] = useState("14155238886");
+
+  useEffect(() => {
+    api.health().then((h) => {
+      if (h.twilio_whatsapp_from) {
+        const cleaned = h.twilio_whatsapp_from.replace(/[^\d+]/g, "");
+        const digits = cleaned.startsWith("+") ? cleaned.slice(1) : cleaned;
+        setTwilioFrom(digits);
+      }
+    }).catch(() => {});
+  }, []);
 
   const stepIndex = step === "login" ? 0 : step === "verify" ? 1 : 2;
 
@@ -104,7 +115,7 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
                 </p>
                 <div className="w-36 h-36 bg-white border border-outline-variant rounded-lg p-2 flex items-center justify-center">
                   <img
-                    src={`https://quickchart.io/qr?size=140&text=${encodeURIComponent(`https://wa.me/14155238886?text=join%20${sandboxKeyword}`)}`}
+                    src={`https://quickchart.io/qr?size=140&text=${encodeURIComponent(`https://wa.me/${twilioFrom}?text=join%20${sandboxKeyword}`)}`}
                     alt="Twilio Sandbox QR Code"
                     className="w-full h-full object-contain"
                   />
