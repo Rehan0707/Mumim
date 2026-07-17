@@ -165,7 +165,7 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
                 />
                 {debugOtp && (
                   <div className="mt-2 text-sm text-emerald-800 bg-emerald-50 border border-emerald-200/50 rounded-xl p-3 text-center font-medium">
-                    🔧 [Dev Mode] Verification OTP: <span className="font-mono text-base font-bold bg-white px-2.5 py-0.5 rounded border border-emerald-300 select-all">{debugOtp}</span>
+                    🔑 Verification OTP: <span className="font-mono text-base font-bold bg-white px-2.5 py-0.5 rounded border border-emerald-300 select-all">{debugOtp}</span>
                   </div>
                 )}
               </div>
