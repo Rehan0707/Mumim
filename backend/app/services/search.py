@@ -6,6 +6,7 @@ candidate fetch to an ORDER BY embedding <=> query_vec query — scoring stays t
 """
 from __future__ import annotations
 
+import re
 from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
@@ -115,7 +116,7 @@ def image_search(
         scored = [
             (embeddings.cosine(query_vec, p.image_embedding), p)
             for p in products
-            if p.image_embedding
+            if p.image_embedding is not None
         ]
 
     scored.sort(key=lambda x: x[0], reverse=True)

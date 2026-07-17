@@ -1,11 +1,12 @@
 import { useState } from "react";
 
-export type PageKey = "home" | "orders" | "inventory" | "analytics" | "crm" | "settings";
+export type PageKey = "home" | "orders" | "inventory" | "invoice" | "analytics" | "crm" | "settings";
 
 const NAV_ITEMS: { key: PageKey; label: string; icon: string }[] = [
   { key: "home", label: "Home", icon: "home" },
   { key: "orders", label: "Orders", icon: "receipt_long" },
   { key: "inventory", label: "Inventory", icon: "inventory_2" },
+  { key: "invoice", label: "Invoice", icon: "description" },
   { key: "analytics", label: "Analytics", icon: "leaderboard" },
   { key: "crm", label: "CRM", icon: "group" },
   { key: "settings", label: "Settings", icon: "settings" },
@@ -17,12 +18,14 @@ export default function Sidebar({
   business,
   live,
   onLogout,
+  onLanding,
 }: {
   page: string;
   onNav: (page: string) => void;
   business: { name: string; whatsapp_no: string } | null;
   live: boolean;
   onLogout: () => void;
+  onLanding: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -44,7 +47,7 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col bg-surface-container-lowest shadow-float-depth transition-transform duration-300 md:translate-x-0 ${
+        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col glass-sidebar transition-transform duration-300 md:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -60,7 +63,7 @@ export default function Sidebar({
         </div>
 
         <div className="px-6 py-card-padding">
-          <h1 className="font-display text-display-lg font-bold text-primary">Munim.ai</h1>
+          <h1 onClick={onLanding} className="font-display text-display-lg font-bold text-primary cursor-pointer hover:opacity-85 transition-opacity">Munim.ai</h1>
           <p className="font-label-caps text-label-caps text-on-surface-variant mt-1">Live Ledger</p>
         </div>
 
@@ -82,8 +85,8 @@ export default function Sidebar({
               }}
               className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all duration-200 ${
                 page === item.key
-                  ? "bg-secondary-container text-on-secondary-container"
-                  : "text-on-surface-variant hover:bg-surface-container-high"
+                  ? "glass-nav-active text-[#0f2b1d] border border-white/50"
+                  : "text-[#0f2b1d]/60 hover:bg-white/30 hover:backdrop-blur-sm"
               }`}
             >
               <span
@@ -128,7 +131,7 @@ export default function Sidebar({
         )}
       </aside>
 
-      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-surface shadow-[0_-4px_20px_rgba(15,92,70,0.08)] z-20 flex justify-around items-center h-16">
+      <nav className="md:hidden fixed bottom-0 left-0 w-full glass-mobile-nav z-20 flex justify-around items-center h-16">
         {NAV_ITEMS.slice(0, 4).map((item) => (
           <button
             key={item.key}

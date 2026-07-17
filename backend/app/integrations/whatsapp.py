@@ -11,6 +11,8 @@ TWILIO_WHATSAPP_FROM to go live via the Twilio Sandbox.
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
 import json
 import logging
 import urllib.parse
@@ -27,6 +29,8 @@ TWILIO_API = "https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
 def send_message(to: str, body: str, media_url: str = None) -> dict:
     """Send a WhatsApp message to `to`. Returns a receipt dict."""
     if settings.WHATSAPP_MODE != "twilio":
+        if settings.is_production and not settings.allow_production_mocks:
+            raise RuntimeError("mock WhatsApp sender is disabled in production")
         log.info("[mock-whatsapp] -> %s: %s (media: %s)", to, (body or "").replace("\n", " ⏎ "), media_url)
         return {"mode": "mock", "to": to, "status": "logged", "media": media_url}
     return _send_twilio(to, body, media_url)
@@ -44,15 +48,22 @@ def _send_twilio(to: str, body: str, media_url: str = None) -> dict:
             "Twilio not configured: set TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_WHATSAPP_FROM"
         )
     
-    # Payload banana
-    payload = {"From": f"whatsapp:{sender}", "To": f"whatsapp:{to}", "Body": body}
-    
-    # Agar audio ya image hai, toh Twilio ke payload mein MediaUrl daal do
-    if media_url:
-        payload["MediaUrl"] = media_url
+    import re
+    params = {"From": f"whatsapp:{sender}", "To": f"whatsapp:{to}"}
+    template_sid = settings.TWILIO_OTP_TEMPLATE_SID
+    if template_sid:
+        params["ContentSid"] = template_sid
+        otp_match = re.search(r"\b\d{6}\b", body)
+        if otp_match:
+            otp_code = otp_match.group(0)
+            params["ContentVariables"] = json.dumps({"1": otp_code})
+    else:
+        params["Body"] = body
 
-    data = urllib.parse.urlencode(payload).encode()
-    
+    if media_url:
+        params["MediaUrl"] = media_url
+
+    data = urllib.parse.urlencode(params).encode()
     req = urllib.request.Request(TWILIO_API.format(sid=sid), data=data, method="POST")
     auth = base64.b64encode(f"{sid}:{token}".encode()).decode()
     req.add_header("Authorization", f"Basic {auth}")
@@ -60,3 +71,16 @@ def _send_twilio(to: str, body: str, media_url: str = None) -> dict:
         payload = json.loads(resp.read())
     log.info("[twilio] sent sid=%s to=%s", payload.get("sid"), to)
     return {"mode": "twilio", "to": to, "status": "sent", "sid": payload.get("sid")}
+
+
+def verify_twilio_signature(url: str, form: dict, signature: str) -> bool:
+    """Validate Twilio's X-Twilio-Signature header for inbound webhooks."""
+    token = settings.TWILIO_AUTH_TOKEN
+    if not token or not signature:
+        return False
+    pieces = [url]
+    for key in sorted(form):
+        pieces.append(f"{key}{form[key]}")
+    digest = hmac.new(token.encode("utf-8"), "".join(pieces).encode("utf-8"), hashlib.sha1).digest()
+    expected = base64.b64encode(digest).decode("ascii")
+    return hmac.compare_digest(expected, signature)

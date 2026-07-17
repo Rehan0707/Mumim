@@ -46,6 +46,31 @@ CATALOG = [
     ("Toor Dal 1kg", "Tata Sampann", "grocery", {"weight": "1kg"}, 160, 15, "photo-1596797038530-2c107229654b"),
     ("Colgate Toothpaste 100g", "Colgate", "personal-care", {"weight": "100g"}, 55, 22, "photo-1607613009820-a29f7bb81c04"),
     ("Dettol Soap 125g", "Dettol", "personal-care", {"weight": "125g"}, 40, 35, "photo-1600857544200-b2f666a9a2ec"),
+    # --- electronics ---
+    ("iPhone 15 Pro Max", "Apple", "electronics", {"storage": "256GB", "color": "titanium"}, 139900, 5, "photo-1511707171634-5f897ff02aa9"),
+    ("Galaxy S24 Ultra", "Samsung", "electronics", {"storage": "512GB", "color": "black"}, 129900, 8, "photo-1610945265064-0e34e5519bbf"),
+    ("WH-1000XM5 Headphones", "Sony", "electronics", {"type": "wireless", "color": "silver"}, 29990, 10, "photo-1505740420928-5e560c06d30e"),
+    ("MacBook Air M3", "Apple", "electronics", {"ram": "8GB", "ssd": "256GB"}, 99900, 6, "photo-1517336714731-489689fd1ca8"),
+    ("iPad Pro 11-inch", "Apple", "electronics", {"storage": "128GB", "color": "space-grey"}, 89900, 6, "photo-1544244015-0df4b3ffc6b0"),
+    ("PS5 Slim Console", "Sony", "electronics", {"edition": "digital"}, 44990, 8, "photo-1606813907291-d86efa9b94db"),
+    # --- clothing ---
+    ("Leather Jacket Black", "Zara", "casual", {"size": "L"}, 7999, 3, "photo-1551028719-00167b16eac5"),
+    ("White Sneakers", "Puma", "footwear", {"size": "9"}, 3999, 7, "photo-1582588678413-dbf45f4823e9"),
+    # --- grocery ---
+    ("Organic Green Tea 25 bags", "Organic India", "grocery", {"weight": "50g"}, 165, 30, "photo-1564890369478-c89ca6d9cde9"),
+    ("Nutella Hazelnut Spread 350g", "Ferrero", "grocery", {"weight": "350g"}, 399, 20, "photo-1553456558-aff63285bdd1"),
+    # --- home appliances ---
+    ("V15 Cordless Vacuum", "Dyson", "appliances", {"type": "cordless"}, 65900, 4, "photo-1558317374-067fb5f30001"),
+    ("Vertuo Coffee Machine", "Nespresso", "appliances", {"color": "black"}, 22999, 6, "photo-1514432324607-a09d9b4aefdd"),
+    # --- sports & outdoors ---
+    ("Yoga Mat Pro 6mm", "Lululemon", "sports", {"material": "rubber"}, 5999, 12, "photo-1601925260368-ae2f83cf8b7f"),
+    ("Water Bottle 1L", "Hydro Flask", "sports", {"volume": "1L"}, 3499, 25, "photo-1602143407151-7111542de6e8"),
+    # --- books & stationery ---
+    ("Atomic Habits", "James Clear", "books", {"format": "paperback"}, 499, 20, "photo-1544716278-ca5e3f4abd8c"),
+    ("Classic Notebook", "Moleskine", "stationery", {"layout": "ruled"}, 1899, 15, "photo-1531346878377-a5be20888e57"),
+    # --- snacks ---
+    ("Dark Chocolate 85%", "Lindt Excellence", "grocery", {"weight": "100g"}, 295, 40, "photo-1548907040-4d42b5212ecb"),
+    ("Sparkling Water 6-Pack", "Perrier", "grocery", {"pack": "6x330ml"}, 599, 18, "photo-1622483767028-3f66f32aef97"),
 ]
 
 CUSTOMERS = [
@@ -53,73 +78,114 @@ CUSTOMERS = [
     ("+919812345602", "Rohit Verma"),
     ("+919812345603", "Meena Patil"),
     ("+919812345604", "Sanjay Gupta"),
+    ("9812345605", "Vikram Malhotra"),
+    ("9812345606", "Sneha Rao"),
+    ("9812345607", "Karan Johar"),
+    ("9812345608", "Priya Sen"),
+    ("9812345609", "Rahul Bajaj"),
+    ("+919812345610", "Amit Patel"),
+    ("+919812345611", "Divya Nair"),
+    ("+919812345612", "Rohan Das"),
+    ("+919812345613", "Kriti Sanon"),
+    ("+919812345614", "Varun Dhawan"),
+    ("+919812345615", "Alia Bhatt"),
 ]
 
 
+def _ensure_random_app_secret() -> None:
+    from pathlib import Path
+    import secrets
+    import os
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if not env_path.exists():
+        return
+    content = env_path.read_text()
+    placeholder = "change-me-to-a-32-character-random-secret"
+    if placeholder in content:
+        new_secret = secrets.token_hex(16)
+        content = content.replace(placeholder, new_secret)
+        env_path.write_text(content)
+        if os.environ.get("APP_SECRET") == placeholder:
+            os.environ["APP_SECRET"] = new_secret
+
+
 def run() -> None:
+    _ensure_random_app_secret()
     from .config import settings
     if not settings.DATABASE_URL.startswith("sqlite"):
-        from sqlalchemy import text
-        with engine.begin() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
-    Base.metadata.drop_all(bind=engine)
+        from sqlalchemy import text, inspect
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        if tables:
+            with engine.begin() as conn:
+                table_list = ", ".join(f'"{t}"' for t in tables)
+                conn.execute(text(f"DROP TABLE IF EXISTS {table_list} CASCADE;"))
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+    else:
+        Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     random.seed(42)
     try:
-        biz = Business(
+        biz1 = Business(
             name="Ramesh Vastralaya & General Store", whatsapp_no="+919800000000",
             category="clothing", lang_default="hi", upi_id="ramesh@okhdfcbank",
         )
-        db.add(biz)
+        biz2 = Business(
+            name="Ramesh Vastralaya & General Store", whatsapp_no="+919890786572",
+            category="clothing", lang_default="hi", upi_id="ramesh@okhdfcbank",
+        )
+        db.add(biz1)
+        db.add(biz2)
         db.flush()
 
-        products = []
-        for name, brand, cat, attrs, price, stock, photo in CATALOG:
-            text = embeddings.product_text(name, brand, attrs)
-            p = Product(
-                business_id=biz.id, name=name, brand=brand, category=cat, attributes=attrs,
-                price=price, stock_qty=stock, image_url=f"{IMG}{photo}?w=400",
-                text_embedding=embeddings.embed_text(text),
-            )
-            db.add(p)
-            products.append(p)
-        db.flush()
-
-        customers = []
-        for no, name in CUSTOMERS:
-            c = crm.upsert_customer(db, biz.id, no, name)
-            customers.append(c)
-        db.flush()
-
-        # past PAID orders across the last 10 days -> lively CRM + analytics
-        now = datetime.now(timezone.utc)
-        for i in range(14):
-            cust = random.choice(customers)
-            prod = random.choice(products)
-            qty = random.randint(1, 3)
-            when = now - timedelta(days=random.randint(1, 10), hours=random.randint(0, 20))
-            order = Order(business_id=biz.id, customer_id=cust.id, status="paid",
-                          total=float(prod.price) * qty, created_at=when, paid_at=when,
-                          payment_ref=f"seed_{i}")
-            db.add(order)
+        for biz in (biz1, biz2):
+            products = []
+            for name, brand, cat, attrs, price, stock, photo in CATALOG:
+                text = embeddings.product_text(name, brand, attrs)
+                p = Product(
+                    business_id=biz.id, name=name, brand=brand, category=cat, attributes=attrs,
+                    price=price, stock_qty=stock, image_url=f"{IMG}{photo}?w=400",
+                    text_embedding=embeddings.embed_text(text),
+                )
+                db.add(p)
+                products.append(p)
             db.flush()
-            db.add(OrderItem(order_id=order.id, product_id=prod.id, qty=qty, unit_price=float(prod.price)))
-            cust.total_spend = float(cust.total_spend or 0) + float(prod.price) * qty
-            cust.order_count = (cust.order_count or 0) + 1
-            if cust.last_order is None or when > cust.last_order:
-                cust.last_order = when
-            db.add(Message(business_id=biz.id, customer_id=cust.id, direction="in",
-                           input_type="text", text=f"{prod.name} chahiye", intent="ORDER",
-                           lang="hi", created_at=when))
 
-        for cust in customers:
-            crm.recompute_segment(cust)
+            customers = []
+            for no, name in CUSTOMERS:
+                c = crm.upsert_customer(db, biz.id, no, name)
+                customers.append(c)
+            db.flush()
+
+            # past PAID orders across the last 10 days -> lively CRM + analytics
+            now = datetime.now(timezone.utc)
+            for i in range(100):
+                cust = random.choice(customers)
+                prod = random.choice(products)
+                qty = random.randint(1, 3)
+                when = now - timedelta(days=random.randint(1, 10), hours=random.randint(0, 20))
+                order = Order(business_id=biz.id, customer_id=cust.id, status="paid",
+                              total=float(prod.price) * qty, created_at=when, paid_at=when,
+                              payment_ref=f"seed_{i}")
+                db.add(order)
+                db.flush()
+                db.add(OrderItem(order_id=order.id, product_id=prod.id, qty=qty, unit_price=float(prod.price)))
+                cust.total_spend = float(cust.total_spend or 0) + float(prod.price) * qty
+                cust.order_count = (cust.order_count or 0) + 1
+                if cust.last_order is None or when > cust.last_order:
+                    cust.last_order = when
+                db.add(Message(business_id=biz.id, customer_id=cust.id, direction="in",
+                               input_type="text", text=f"{prod.name} chahiye", intent="ORDER",
+                               lang="hi", created_at=when))
+
+            for cust in customers:
+                crm.recompute_segment(cust)
 
         db.commit()
-        print(f"✅ Seeded business_id = {biz.id}")
-        print(f"   {len(products)} products, {len(customers)} customers, 14 past orders")
-        print(f"   Demo WhatsApp shop no: {biz.whatsapp_no}")
+        print(f"✅ Seeded business_id = {biz1.id} & {biz2.id}")
+        print(f"   {len(CATALOG)} products, {len(CUSTOMERS)} customers, 100 past orders per store")
+        print(f"   Demo WhatsApp shop no: {biz1.whatsapp_no} & {biz2.whatsapp_no}")
     finally:
         db.close()
 

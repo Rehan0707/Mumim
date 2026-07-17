@@ -141,3 +141,31 @@ class Message(Base):
     intent: Mapped[Optional[str]] = mapped_column(Text)  # ORDER | QUERY | LAST_ORDER ...
     lang: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class OtpChallenge(Base):
+    """Short-lived, one-time owner login challenge persisted across instances."""
+
+    __tablename__ = "otp_challenges"
+
+    phone: Mapped[str] = mapped_column(Text, primary_key=True)
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PendingReservation(Base):
+    """A customer's staged catalog selection awaiting an explicit confirmation."""
+
+    __tablename__ = "pending_reservations"
+    __table_args__ = (UniqueConstraint("business_id", "whatsapp_no"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    business_id: Mapped[str] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False)
+    whatsapp_no: Mapped[str] = mapped_column(Text, nullable=False)
+    product_id: Mapped[str] = mapped_column(ForeignKey("products.id"), nullable=False)
+    qty: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

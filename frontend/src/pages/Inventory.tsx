@@ -12,11 +12,44 @@ export function Inventory({ bid, refreshKey, highlight }: { bid: string; refresh
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Modal state for Add/Edit product
+  const [modal, setModal] = useState<{ mode: "add" } | { mode: "edit"; product: Product } | null>(null);
+  const [form, setForm] = useState({
+    name: "",
+    brand: "",
+    category: "",
+    price: 0,
+    stock_qty: 0,
+    image_url: "",
+  });
+
   const load = () => api.products(bid).then(setProducts).catch(() => {});
   useEffect(() => {
     if (bid) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bid, refreshKey]);
+
+  useEffect(() => {
+    if (modal?.mode === "edit" && "product" in modal) {
+      setForm({
+        name: modal.product.name,
+        brand: modal.product.brand || "",
+        category: modal.product.category || "",
+        price: modal.product.price,
+        stock_qty: modal.product.stock_qty,
+        image_url: modal.product.image_url || "",
+      });
+    } else {
+      setForm({
+        name: "",
+        brand: "",
+        category: "",
+        price: 0,
+        stock_qty: 0,
+        image_url: "",
+      });
+    }
+  }, [modal]);
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -56,8 +89,46 @@ export function Inventory({ bid, refreshKey, highlight }: { bid: string; refresh
     }
   }
 
+  async function handleDelete(pid: string) {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    try {
+      await api.deleteProduct(pid);
+      await load();
+    } catch {
+      alert("Failed to delete product.");
+    }
+  }
+
+  async function handleSaveProduct() {
+    if (!form.name || form.price < 0) return;
+    setSaving(true);
+    try {
+      const body = {
+        name: form.name,
+        brand: form.brand || null,
+        category: form.category || null,
+        price: form.price,
+        stock_qty: form.stock_qty,
+        image_url: form.image_url || null,
+        attributes: {},
+      };
+
+      if (modal?.mode === "add") {
+        await api.createProduct(bid, body);
+      } else if (modal?.mode === "edit" && "product" in modal) {
+        await api.updateProduct(modal.product.id, body);
+      }
+      setModal(null);
+      await load();
+    } catch {
+      alert("Failed to save product.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const filtered = products.filter((p) =>
-    `${p.name} ${p.brand} ${p.category}`.toLowerCase().includes(q.toLowerCase())
+    `${p.name} ${p.brand || ""} ${p.category || ""}`.toLowerCase().includes(q.toLowerCase())
   );
 
   return (
@@ -72,6 +143,14 @@ export function Inventory({ bid, refreshKey, highlight }: { bid: string; refresh
             className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:border-brand-500"
           />
           <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={onFile} />
+          
+          <button
+            onClick={() => setModal({ mode: "add" })}
+            className="text-sm font-semibold bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-lg px-3 py-1.5 flex items-center gap-1"
+          >
+            ➕ Add Product
+          </button>
+
           <button
             onClick={() => fileRef.current?.click()}
             disabled={scanning}
@@ -91,10 +170,28 @@ export function Inventory({ bid, refreshKey, highlight }: { bid: string; refresh
           return (
             <div
               key={p.id}
-              className={`rounded-xl border p-3 transition ${hl ? "flash border-brand-400" : "border-slate-100"} ${
+              className={`group relative rounded-xl border p-3 transition ${hl ? "flash border-brand-400" : "border-slate-100"} ${
                 low ? "bg-amber-50/50" : "bg-white"
               }`}
             >
+              {/* Quick Actions (Hover overlay) */}
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex gap-1 z-10">
+                <button
+                  onClick={() => setModal({ mode: "edit", product: p })}
+                  className="bg-white/90 shadow-md p-1.5 rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-600 hover:text-slate-900 animate-fade-in"
+                  title="Edit product"
+                >
+                  ✏️
+                </button>
+                <button
+                  onClick={() => handleDelete(p.id)}
+                  className="bg-white/90 shadow-md p-1.5 rounded-lg border border-slate-100 hover:bg-slate-50 text-red-500 hover:text-red-700 animate-fade-in"
+                  title="Delete product"
+                >
+                  🗑️
+                </button>
+              </div>
+
               <div className="h-28 rounded-lg bg-slate-100 mb-2 overflow-hidden grid place-items-center">
                 {p.image_url ? (
                   <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
@@ -118,6 +215,91 @@ export function Inventory({ bid, refreshKey, highlight }: { bid: string; refresh
         })}
       </div>
 
+      {/* Product Add/Edit Modal */}
+      {modal && (
+        <div className="fixed inset-0 bg-black/40 grid place-items-center z-50 p-4 animate-fade-in" onClick={() => !saving && setModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col animate-scale-up" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b">
+              <h4 className="font-bold text-slate-800">
+                {modal.mode === "add" ? "➕ Add Product" : "✏️ Edit Product"}
+              </h4>
+            </div>
+            <div className="p-4 space-y-3">
+              <label className="block text-xs font-semibold text-slate-500 uppercase">Product Name</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:border-brand-500"
+                placeholder="Product name"
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase">Brand</label>
+                  <input
+                    value={form.brand}
+                    onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:border-brand-500"
+                    placeholder="Brand"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase">Category</label>
+                  <input
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:border-brand-500"
+                    placeholder="Category"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase">Price (₹)</label>
+                  <input
+                    type="number"
+                    value={form.price || ""}
+                    onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase">Stock Quantity</label>
+                  <input
+                    type="number"
+                    value={form.stock_qty || ""}
+                    onChange={(e) => setForm({ ...form, stock_qty: parseInt(e.target.value) || 0 })}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:border-brand-500"
+                  />
+                </div>
+              </div>
+
+              <label className="block text-xs font-semibold text-slate-500 uppercase">Image URL</label>
+              <input
+                value={form.image_url}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:border-brand-500"
+                placeholder="https://..."
+              />
+            </div>
+            <div className="p-4 border-t flex items-center justify-end gap-2">
+              <button onClick={() => setModal(null)} disabled={saving} className="text-sm text-slate-500 px-3 py-1.5">
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveProduct}
+                disabled={saving || !form.name}
+                className="text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg px-4 py-1.5 disabled:opacity-50"
+              >
+                {saving ? "Saving…" : "Save Product"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bill Scan Dialog */}
       {draft && (
         <div className="fixed inset-0 bg-black/40 grid place-items-center z-50 p-4" onClick={() => !saving && setDraft(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>

@@ -61,6 +61,25 @@ export interface Analytics {
   forecast: { date: string; revenue: number }[];
   top_items: { name: string; qty: number; revenue: number }[];
   low_stock: { name: string; stock_qty: number }[];
+  recommendations: Recommendation[];
+}
+
+export interface Recommendation {
+  product_id: string;
+  name: string;
+  price: number;
+  stock_qty: number;
+  image_url?: string;
+  score: number;
+  reason: string;
+}
+
+export interface DailySummary {
+  business_id: string;
+  channel: "whatsapp";
+  message: string;
+  kpis: Analytics["kpis"];
+  restock: { name: string; stock_qty: number }[];
 }
 
 export interface WsEvent {

@@ -1,8 +1,11 @@
 export type DemoSession = {
   authenticated: boolean;
+  accessToken?: string;
   email: string;
+  phone?: string;
   role: "owner" | "manager";
   shopName: string;
+  businessId?: string;
   grantedAt: string;
 };
 
@@ -21,6 +24,11 @@ export function loadSession(): DemoSession | null {
 
 export function saveSession(session: DemoSession) {
   window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
+export function getAccessToken(): string | null {
+  const session = loadSession();
+  return session?.accessToken || null;
 }
 
 export function clearSession() {

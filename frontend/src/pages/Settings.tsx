@@ -8,6 +8,7 @@ export function Settings({ business, onSaved }: { business?: Business; onSaved: 
     name: business?.name || "",
     upi_id: business?.upi_id || "",
     lang_default: business?.lang_default || "hi",
+    category: business?.category || "kirana",
   });
   const [saved, setSaved] = useState(false);
 
@@ -25,6 +26,13 @@ export function Settings({ business, onSaved }: { business?: Business; onSaved: 
       <div className="space-y-4">
         <Field label="Shop name">
           <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input" />
+        </Field>
+        <Field label="Shop Category">
+          <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input">
+            <option value="kirana">Kirana / Grocery Store</option>
+            <option value="clothing">Clothing / Boutique</option>
+            <option value="pharmacy">Pharmacy / Chemist</option>
+          </select>
         </Field>
         <Field label="WhatsApp number (read-only)">
           <input value={business?.whatsapp_no || ""} disabled className="input bg-slate-50 text-slate-400" />

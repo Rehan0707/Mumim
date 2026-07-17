@@ -1,27 +1,52 @@
 import { useState } from "react";
 import { Button, Card, Input } from "../components/ui";
+import { api } from "../api";
 
 function maskPhone(p: string) {
   if (p.length < 4) return p;
   return p.slice(0, 2) + "X".repeat(Math.max(0, p.length - 4)) + p.slice(-2);
 }
 
-export function Auth({ onDone }: { onDone: () => void }) {
-
+export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken: string }) => void }) {
   const [step, setStep] = useState<"login" | "verify" | "success">("login");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sandboxKeyword, setSandboxKeyword] = useState("double-john");
 
   const stepIndex = step === "login" ? 0 : step === "verify" ? 1 : 2;
 
-  function handleSendOtp() {
+  async function handleSendOtp() {
     if (!phone.trim()) return;
-    setStep("verify");
+    setLoading(true);
+    setError(null);
+    try {
+      const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+      await api.sendOtp(formattedPhone);
+      setStep("verify");
+    } catch (err: any) {
+      setError("Failed to send verification code. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleVerify() {
+  async function handleVerify() {
     if (otp.length < 6) return;
-    setStep("success");
+    setLoading(true);
+    setError(null);
+    try {
+      const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+      const result = await api.verifyOtp(formattedPhone, otp);
+      setAccessToken(result.access_token);
+      setStep("success");
+    } catch (err: any) {
+      setError("Invalid verification code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -47,7 +72,7 @@ export function Auth({ onDone }: { onDone: () => void }) {
               </svg>
 
               <div>
-                <h1 className="font-display text-display-lg-mobile text-primary">Connect WhatsApp</h1>
+                <h1 className="font-display text-display-lg-mobile text-primary">Verify WhatsApp</h1>
                 <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">Enter your WhatsApp number to get started</p>
               </div>
 
@@ -62,21 +87,50 @@ export function Auth({ onDone }: { onDone: () => void }) {
                     onChange={(e: any) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     placeholder="9876543210"
                     className="border-none rounded-none flex-1"
+                    disabled={loading}
                   />
                 </div>
               </div>
 
-              <Button onClick={handleSendOtp} className="w-full">
-                Send OTP
+              {/* Twilio Sandbox QR Code Helper */}
+              <div className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl p-4 flex flex-col items-center gap-3">
+                <p className="font-body-sm text-body-sm text-on-surface-variant font-medium text-center">
+                  Using Twilio Sandbox? Scan this QR code to join the sandbox and receive real OTPs on WhatsApp:
+                </p>
+                <div className="w-36 h-36 bg-white border border-outline-variant rounded-lg p-2 flex items-center justify-center">
+                  <img
+                    src={`https://quickchart.io/qr?size=140&text=${encodeURIComponent(`https://wa.me/14155238886?text=join%20${sandboxKeyword}`)}`}
+                    alt="Twilio Sandbox QR Code"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="w-full">
+                  <label className="font-label-caps text-[10px] text-on-surface-variant uppercase text-left block mb-1">
+                    Sandbox Keyword (e.g. double-john)
+                  </label>
+                  <Input
+                    value={sandboxKeyword}
+                    onChange={(e: any) => setSandboxKeyword(e.target.value.replace(/\s+/g, ""))}
+                    placeholder="double-john"
+                    className="h-8 text-xs"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 w-full text-center font-medium">
+                  {error}
+                </div>
+              )}
+
+              <Button onClick={handleSendOtp} className="w-full" disabled={loading}>
+                {loading ? "Sending..." : "Send OTP"}
               </Button>
 
               <p className="font-body-sm text-body-sm text-on-surface-variant">
-                Demo: Any number works. Click 'Send OTP' to continue.
+                We will send a one-time verification code to this phone number.
               </p>
-
-              <button onClick={onDone} className="font-body-sm text-body-sm text-primary underline">
-                Sign in with demo account
-              </button>
             </div>
           )}
 
@@ -104,14 +158,25 @@ export function Auth({ onDone }: { onDone: () => void }) {
                   placeholder="000000"
                   maxLength={6}
                   className="text-center font-numeral-lg text-numeral-lg tracking-[0.5em]"
+                  disabled={loading}
                 />
               </div>
 
-              <Button onClick={handleVerify} className="w-full">
-                Verify &amp; Continue
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 w-full text-center font-medium">
+                  {error}
+                </div>
+              )}
+
+              <Button onClick={handleVerify} className="w-full" disabled={loading}>
+                {loading ? "Verifying..." : "Verify & Continue"}
               </Button>
 
-              <button onClick={() => { setStep("login"); setOtp(""); }} className="font-body-sm text-body-sm text-primary underline">
+              <button 
+                onClick={() => { setStep("login"); setOtp(""); setError(null); }} 
+                className="font-body-sm text-body-sm text-primary underline"
+                disabled={loading}
+              >
                 Back
               </button>
             </div>
@@ -128,39 +193,19 @@ export function Auth({ onDone }: { onDone: () => void }) {
               <div>
                 <h2 className="font-display text-display-lg-mobile text-primary">You're all set!</h2>
                 <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">
-                  Munim.ai is now connected to your WhatsApp
+                  Your owner access has been verified
                 </p>
               </div>
 
-              <Button onClick={onDone} className="w-full">
+              <Button
+                onClick={() => onDone({ phone: phone.startsWith("+") ? phone : `+91${phone}`, accessToken })}
+                className="w-full"
+                disabled={!accessToken}
+              >
                 Go to Dashboard
               </Button>
             </div>
           )}
-        </Card>
-
-        <Card className="w-full bg-surface-container-low border border-outline-variant/30">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Demo Access</span>
-              <span className="rounded-full bg-primary-fixed/30 px-3 py-0.5 font-label-caps text-label-caps text-primary">
-                Quick Start
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="font-label-caps text-label-caps text-on-surface-variant block">Email</span>
-                <span className="font-body-sm text-body-sm text-on-surface font-medium">owner@munim.ai</span>
-              </div>
-              <div>
-                <span className="font-label-caps text-label-caps text-on-surface-variant block">Password</span>
-                <span className="font-body-sm text-body-sm text-on-surface font-medium">demo1234</span>
-              </div>
-            </div>
-            <Button onClick={onDone} className="w-full">
-              Quick Sign In
-            </Button>
-          </div>
         </Card>
       </div>
     </div>

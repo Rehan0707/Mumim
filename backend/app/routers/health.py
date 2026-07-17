@@ -37,4 +37,10 @@ def ready(db: Session = Depends(get_db)):
     except Exception as exc:  # pragma: no cover - only on real DB outage
         log.error("readiness check failed: %s", exc)
         return JSONResponse(status_code=503, content={"status": "not_ready", "db": "down"})
+    production_errors = settings.production_ready_errors()
+    if production_errors:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "db": "up", "production_errors": production_errors},
+        )
     return {"status": "ready", "db": "up"}

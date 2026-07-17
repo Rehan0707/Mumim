@@ -1,13 +1,13 @@
 # Munim.ai — Project Status
 
-**As of:** 5 Jul 2026 · **Deadline:** 6 Jul 2026 · **Repo:** [github.com/Rehan0707/Mumim](https://github.com/Rehan0707/Mumim)
+**As of:** 14 Jul 2026 · **Deadline:** 6 Jul 2026 · **Repo:** [github.com/Rehan0707/Mumim](https://github.com/Rehan0707/Mumim)
 
-> **TL;DR:** The full P0 demo path is **built, real, and working end-to-end** — text ordering,
-> real Razorpay payments, real FashionCLIP visual search, real multilingual semantic search,
-> receipt-scan onboarding, and a live dashboard. Twilio is authenticated & wired; the only
-> remaining step is the live phone round-trip config (your Twilio console + phone).
+> **TL;DR:** The full P0 demo path is **built and deployed** — text ordering,
+> Razorpay payments, FashionCLIP/text visual search fallback, multilingual semantic search,
+> receipt-scan onboarding, and a dashboard. Twilio is wired through the Vercel backend and
+> replies with signed TwiML from `/webhook/whatsapp`.
 
-**Overall: ~90% of the demo scope done.** Remaining is mostly polish + optional differentiators.
+**Overall: ~95% of the demo scope done.** Remaining is mostly production hardening + optional ML differentiators.
 
 ---
 
@@ -21,15 +21,15 @@
   `/products` (+`/scan` +`/bulk`), `/orders` (+`/pay` +`/payments/webhook` +`/fulfill`),
   `/businesses` (+POST), `/customers`, `/analytics/summary`, `/health` (+`/live` +`/ready`), `WS /ws/dashboard`
 - Logging, request-id middleware, global exception handling, CORS, Swagger `/docs`
-- **35 automated tests pass**; CI green (GitHub Actions)
+- **43 automated tests pass** locally
 
 ### Integrations / DevOps (Role 1) — 95%
 - ✅ GitHub repo, branching strategy, `.gitignore`, `.env` / `.env.example`
 - ✅ **Razorpay — LIVE** (real test keys, verified: real hosted payment links)
-- ✅ **Twilio — authenticated & wired** (`WHATSAPP_MODE=twilio`, real SID+token verified)
-- ✅ **ngrok installed + tunnel live** (public webhook URL working)
+- ✅ **Twilio — authenticated & wired** (`WHATSAPP_MODE=twilio`, signed Vercel webhook verified)
+- ✅ **Vercel backend** deployed at `https://backend-olive-delta-46.vercel.app`
 - ✅ Logging, middleware, health checks, CI, docs
-- ⏳ *Live phone→bot round-trip* needs Sandbox webhook config + join (below)
+- ⏳ *Live phone→bot round-trip* only needs Sandbox webhook URL saved in Twilio console + phone join
 
 ### AI / ML (Role 2) — 75%
 - ✅ **Real multilingual semantic search** (sentence-transformers; understands Hindi/Hinglish)
@@ -54,7 +54,7 @@
 ### Blocking-ish (for a fully-live demo)
 | Item | Owner | Notes |
 |---|---|---|
-| Twilio Sandbox webhook + phone join | You + teammate | Point sandbox "when a message comes in" → ngrok `/webhook/whatsapp`; join from phone. ~5 min |
+| Twilio Sandbox webhook + phone join | You + teammate | Point sandbox "When a message comes in" → `https://backend-olive-delta-46.vercel.app/webhook/whatsapp`; method POST; join from phone. ~5 min |
 
 ### Optional differentiators (nice-to-have, spec P1/P2)
 | Item | Owner | Status |
@@ -62,7 +62,7 @@
 | Real voice orders (IndicWhisper) | Role 2 | stubbed |
 | Multilingual replies (IndicTrans2) | Role 2 | templates |
 | Real forecast (LightGBM) | Role 2 | stub chart |
-| Postgres + pgvector migration (PR #2) | Role 1 | **deferred to post-hackathon** (SQLite works; PR removed tests + needs infra) |
+| Postgres + pgvector migration | Role 1 | Neon Postgres connected; pgvector-style search still has lexical fallback for demo safety |
 
 ### Demo prep (Role 5) — the win factors
 | Item | Status |
@@ -87,9 +87,9 @@
 | F7 | Multilingual replies | 🟡 templates |
 | F8 | Customer CRM | ✅ real |
 | F9 | Analytics + forecast | ✅ KPIs real / forecast stub |
-| F10 | Daily WhatsApp summary | ⬜ roadmap |
+| F10 | Daily WhatsApp summary | ✅ endpoint + dashboard card |
 | F11 | Catalog onboarding by photo | ✅ **real (receipt OCR)** |
-| F12 | Recommendations | ⬜ roadmap |
+| F12 | Recommendations | ✅ co-occurrence/top-seller endpoint + dashboard card |
 
 **MVP set the PRD says to "build real" (F1–F5) = all done ✅**
 
@@ -100,6 +100,6 @@
 - **PR #3** (frontend redesign) — **partially merged**: took Landing/Auth/Onboarding; skipped the static-mockup dashboard pages to protect the live dashboard
 
 ## Known risks / mitigations
-- Wifi/Twilio on stage → simulator is offline-safe (`WHATSAPP_MODE=mock`); Razorpay falls back to UPI
+- Wifi/Twilio on stage → simulator is offline-safe locally; deployed Twilio uses Vercel signed webhook
 - Dikhao top-1 accuracy → use curated screenshots that match seed items
 - Heavy ML deps → kept out of core `requirements.txt` (opt-in `requirements-ml.txt`); tests run without them

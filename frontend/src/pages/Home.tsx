@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { Analytics, Order } from "../types";
+import type { Analytics, DailySummary, Order } from "../types";
 import { Badge, Card, StatCard, formatINR, timeAgo } from "../components/ui";
 
 export function Home({ bid, refreshKey, feed }: { bid: string; refreshKey: number; feed: string[] }) {
   const [a, setA] = useState<Analytics | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [summary, setSummary] = useState<DailySummary | null>(null);
 
   useEffect(() => {
     if (!bid) return;
-    api.analytics(bid).then(setA).catch(() => {});
-    api.orders(bid).then((o) => setOrders(o.slice(0, 6))).catch(() => {});
+    api.analytics(bid).then(setA).catch(() => { });
+    api.orders(bid).then((o) => setOrders(o.slice(0, 6))).catch(() => { });
+    api.dailySummary(bid).then(setSummary).catch(() => { });
   }, [bid, refreshKey]);
 
   return (
@@ -57,6 +59,23 @@ export function Home({ bid, refreshKey, feed }: { bid: string; refreshKey: numbe
           </div>
         </Card>
       </div>
+
+      {summary && (
+        <Card className="p-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h3 className="font-bold text-slate-800 mb-1">Daily WhatsApp summary</h3>
+              <p className="text-xs text-slate-400">Owner-ready message generated from live orders and stock.</p>
+            </div>
+            <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+              F10 ready
+            </span>
+          </div>
+          <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm leading-6 text-slate-700 font-sans">
+            {summary.message}
+          </pre>
+        </Card>
+      )}
 
       {a && a.low_stock.length > 0 && (
         <Card className="p-5 border-l-4 border-l-amber-400">

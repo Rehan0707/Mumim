@@ -14,22 +14,82 @@ holds the "pending reserve" between a QUERY and the customer's "yes" (Redis late
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from ..models import Business, Message, Order, Product
+from ..config import settings
+from ..models import Business, Message, Order, PendingReservation, Product
 from . import crm, nlu, orders, payments, reply, search, vision
 
-# (business_id, customer_no) -> {"product_id","qty","name"} awaiting confirmation
-_PENDING: Dict[str, dict] = {}
+PENDING_RESERVATION_TTL = timedelta(minutes=30)
 
 
-def _key(business_id: str, whatsapp_no: str) -> str:
-    generated_key = f"{business_id}:{whatsapp_no}"
-    # Yahan print laga do
-    print(f"DEBUG: Generated Key for _PENDING -> {generated_key}")
-    return generated_key
+def _expired(timestamp: datetime) -> bool:
+    """SQLite returns naive timestamps even for timezone-aware columns."""
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    return timestamp < datetime.now(timezone.utc)
+
+
+def _get_pending(db: Session, business_id: str, whatsapp_no: str) -> Optional[dict]:
+    pending = (
+        db.query(PendingReservation)
+        .filter(
+            PendingReservation.business_id == business_id,
+            PendingReservation.whatsapp_no == whatsapp_no,
+        )
+        .first()
+    )
+    if pending and _expired(pending.expires_at):
+        db.delete(pending)
+        db.commit()
+        return None
+    if not pending:
+        return None
+    return {"product_id": pending.product_id, "qty": pending.qty, "name": pending.name}
+
+
+def _stage_pending(db: Session, business_id: str, whatsapp_no: str, product_id: str, qty: int, name: str) -> None:
+    pending = (
+        db.query(PendingReservation)
+        .filter(
+            PendingReservation.business_id == business_id,
+            PendingReservation.whatsapp_no == whatsapp_no,
+        )
+        .first()
+    )
+    if pending is None:
+        pending = PendingReservation(
+            business_id=business_id,
+            whatsapp_no=whatsapp_no,
+            product_id=product_id,
+            qty=qty,
+            name=name,
+            expires_at=datetime.now(timezone.utc) + PENDING_RESERVATION_TTL,
+        )
+        db.add(pending)
+    else:
+        pending.product_id = product_id
+        pending.qty = qty
+        pending.name = name
+        pending.expires_at = datetime.now(timezone.utc) + PENDING_RESERVATION_TTL
+    db.commit()
+
+
+def _clear_pending(db: Session, business_id: str, whatsapp_no: str) -> None:
+    pending = (
+        db.query(PendingReservation)
+        .filter(
+            PendingReservation.business_id == business_id,
+            PendingReservation.whatsapp_no == whatsapp_no,
+        )
+        .first()
+    )
+    if pending:
+        db.delete(pending)
+        db.commit()
 
 def _log_message(db: Session, business_id: str, customer_id: Optional[str], direction: str,
                  input_type: str, text: str, intent: Optional[str] = None, lang: Optional[str] = None,
@@ -55,7 +115,10 @@ def handle_message(
     if input_type == "image":
         return _handle_visual(db, business, customer, media_url, events)
     if input_type == "voice":
-        text = text or "[voice note]"  # real IndicWhisper transcript swaps in here
+        if not text and media_url:
+            from .stt import transcribe
+            text = transcribe(media_url)
+        text = text or "[voice note]"
 
     text = (text or "").strip()
     # 1. NLU se dictionary output nikalo
@@ -173,33 +236,31 @@ def _query_and_stage(db, business, customer, result, lang, events, key, cards) -
     print(f"\n🚨 [LLAMA-3 EXTRACTED]: '{result.raw}' | ENTITIES: {result.entities}\n")
     matches = search.semantic_search(db, business.id, result.raw, result.entities, limit=3)
     if not matches:
-        _PENDING.pop(key, None)
+        _clear_pending(db, business.id, customer.whatsapp_no)
         return reply.not_found(lang)
     top = matches[0]
-    _PENDING[key] = {
-        "product_id": top["product_id"],
-        "qty": int(result.entities.get("qty", 1)),
-        "name": top["name"],
-        "business_id": business.id
-    }
+    _stage_pending(
+        db, business.id, customer.whatsapp_no, top["product_id"],
+        int(result.entities.get("qty", 1)), top["name"],
+    )
     cards.append(top)  # show the matched product (with photo) in chat
     return reply.availability(top, lang)
 
 
-def _place(db, business, customer, pending, lang, events, key) -> str:
+def _place(db, business, customer, pending, lang, events) -> str:
     try:
         order = orders.place_order(
             db, business.id, customer.id,
             [{"product_id": pending["product_id"], "qty": pending["qty"]}],
         )
     except orders.OutOfStock:
-        _PENDING.pop(key, None)
+        _clear_pending(db, business.id, customer.whatsapp_no)
         return reply.out_of_stock(pending["name"], lang)
 
     order.payment_link = payments.generate_payment_link(business, order)
     db.commit()
     db.refresh(order)
-    _PENDING.pop(key, None)
+    _clear_pending(db, business.id, customer.whatsapp_no)
 
     # Step 7 events: new order card + stock ticks + low-stock alert.
     events.append({"type": "new_order", "data": orders.serialize(order)})
@@ -229,10 +290,19 @@ def _handle_visual(db, business, customer, media_url, events) -> str:
     if media_url:
         matches = vision.search_by_image_url(db, business.id, media_url, limit=3)
     if matches is None:
+        if not settings.allow_mock_ai:
+            reply_text = "Visual search is temporarily unavailable. Please describe the item in text."
+            _log_message(db, business.id, customer.id, "out", "text", reply_text, "QUERY", lang)
+            events.append({"type": "new_message", "data": {
+                "customer_no": customer.whatsapp_no, "direction": "out", "text": reply_text}})
+            return {"reply": reply_text, "intent": "QUERY", "lang": lang,
+                    "events": events, "customer_id": customer.id, "matches": []}
         matches = search.semantic_search(db, business.id, query or "shirt", {}, limit=3)
     if matches:
-        key = _key(business.id, customer.whatsapp_no)
-        _PENDING[key] = {"product_id": matches[0]["product_id"], "qty": 1, "name": matches[0]["name"]}
+        _stage_pending(
+            db, business.id, customer.whatsapp_no,
+            matches[0]["product_id"], 1, matches[0]["name"],
+        )
     reply_text = reply.visual_matches(matches, lang)
     _log_message(db, business.id, customer.id, "out", "text", reply_text, "QUERY", lang)
     events.append({"type": "new_message", "data": {

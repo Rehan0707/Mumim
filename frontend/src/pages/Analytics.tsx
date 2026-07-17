@@ -61,6 +61,25 @@ export function Analytics({ bid, refreshKey }: { bid: string; refreshKey: number
         </Card>
 
         <Card className="p-5">
+          <h3 className="font-bold text-slate-800 mb-4">Recommendations</h3>
+          <div className="space-y-3">
+            {a.recommendations.length === 0 && <p className="text-sm text-slate-400">No recommendations yet.</p>}
+            {a.recommendations.slice(0, 5).map((r) => (
+              <div key={r.product_id} className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2">
+                <div className="h-10 w-10 overflow-hidden rounded-md bg-slate-100 shrink-0">
+                  {r.image_url && <img src={r.image_url} alt={r.name} className="h-full w-full object-cover" loading="lazy" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-slate-800">{r.name}</div>
+                  <div className="text-xs text-slate-400">{r.reason} · {r.stock_qty} in stock</div>
+                </div>
+                <div className="text-sm font-bold text-slate-800">{formatINR(r.price)}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-5">
           <h3 className="font-bold text-slate-800 mb-4">Restock forecast</h3>
           <div className="space-y-2">
             {a.low_stock.length === 0 && <p className="text-sm text-slate-400">Everything well-stocked ✅</p>}

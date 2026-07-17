@@ -19,7 +19,7 @@ from .db import Base, engine
 from .errors import register_exception_handlers
 from .logging_config import setup_logging
 from .middleware import RequestContextMiddleware
-from .routers import analytics, business, customers, health, media, nlu, orders, products, webhook
+from .routers import analytics, auth, business, customers, health, media, nlu, orders, products, webhook
 from .routers import ws as ws_router
 
 setup_logging(settings.LOG_LEVEL)
@@ -42,24 +42,45 @@ TAGS_METADATA = [
 async def lifespan(app: FastAPI):
     if not settings.DATABASE_URL.startswith("sqlite"):
         from sqlalchemy import text
-        with engine.begin() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        except Exception as exc:
+            log.warning("Could not run CREATE EXTENSION vector: %s. Continuing startup.", exc)
     Base.metadata.create_all(bind=engine)
     
     # Auto-seed if database is empty (Render deployment)
-    from .db import SessionLocal
-    from .models import Business
-    from .seed import run as seed_db
-    
-    with SessionLocal() as db:
-        if not db.query(Business).first():
-            seed_db()
+    import os
+    if os.environ.get("AUTO_SEED", "").strip().lower() in {"1", "true", "yes"}:
+        from .db import SessionLocal
+        from .models import Business
+        from .seed import run as seed_db
+        
+        with SessionLocal() as db:
+            if not db.query(Business).first():
+                seed_db()
 
     log.info(
         "Munim.ai starting | env=%s payment=%s whatsapp=%s db=%s",
         settings.APP_ENV, settings.PAYMENT_MODE, settings.WHATSAPP_MODE,
         settings.DATABASE_URL.split("://")[0],
     )
+
+    # Warm up embeddings text encoder so first query doesn't hang the event loop
+    try:
+        from .embeddings import _load_encoder
+        _load_encoder()
+    except Exception as exc:
+        log.warning("Could not warm up text encoder: %s", exc)
+
+    # Warm up local LLM fallback if GROQ_API_KEY is not set and ML dependencies are present
+    if not os.environ.get("GROQ_API_KEY"):
+        try:
+            from .services.reply import _load_local_llm
+            _load_local_llm()
+        except Exception as exc:
+            log.info("Local LLM not pre-loaded (opt-in ML dependencies might be absent): %s", exc)
+
     if os.environ.get("VISION_PRELOAD", "").strip().lower() in {"1", "true", "yes"}:
         from .services import vision
         vision.warmup()
@@ -91,7 +112,13 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(RequestContextMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_ORIGIN, "http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        settings.FRONTEND_ORIGIN,
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://munim-app.web.app",
+        "https://munim-app-rehan.web.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -100,5 +127,5 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
-for r in (health, webhook, nlu, media, products, orders, customers, analytics, business, ws_router):
+for r in (health, webhook, nlu, media, products, orders, customers, analytics, business, auth, ws_router):
     app.include_router(r.router)
