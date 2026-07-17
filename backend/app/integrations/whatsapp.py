@@ -49,6 +49,14 @@ def _send_twilio(to: str, body: str, media_url: str = None) -> dict:
             "Twilio not configured: set TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_WHATSAPP_FROM"
         )
     
+    # Strip "whatsapp:" prefix if present to avoid double-prefixing
+    sender = sender.strip()
+    if sender.lower().startswith("whatsapp:"):
+        sender = sender[len("whatsapp:"):]
+    to = to.strip()
+    if to.lower().startswith("whatsapp:"):
+        to = to[len("whatsapp:"):]
+
     import re
     params = {"From": f"whatsapp:{sender}", "To": f"whatsapp:{to}"}
     template_sid = settings.TWILIO_OTP_TEMPLATE_SID
@@ -68,21 +76,32 @@ def _send_twilio(to: str, body: str, media_url: str = None) -> dict:
     req = urllib.request.Request(TWILIO_API.format(sid=sid), data=data, method="POST")
     auth = base64.b64encode(f"{sid}:{token}".encode()).decode()
     req.add_header("Authorization", f"Basic {auth}")
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            payload = json.loads(resp.read())
-        log.info("[twilio] sent sid=%s to=%s", payload.get("sid"), to)
-        return {"mode": "twilio", "to": to, "status": "sent", "sid": payload.get("sid")}
-    except urllib.error.HTTPError as err:
+    
+    import time
+    max_retries = 3
+    retry_delay = 1.0
+    
+    for attempt in range(max_retries):
         try:
-            err_body = err.read().decode("utf-8")
-            err_data = json.loads(err_body)
-            msg = err_data.get("message", err_body)
-            code = err_data.get("code", "")
-            more_info = err_data.get("more_info", "")
-            raise RuntimeError(f"Twilio Error {code}: {msg} {more_info}".strip())
-        except Exception:
-            raise RuntimeError(f"Twilio API returned HTTP {err.code}: {err.reason}")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                payload = json.loads(resp.read())
+            log.info("[twilio] sent sid=%s to=%s", payload.get("sid"), to)
+            return {"mode": "twilio", "to": to, "status": "sent", "sid": payload.get("sid")}
+        except urllib.error.HTTPError as err:
+            if err.code == 429 and attempt < max_retries - 1:
+                log.warning("Twilio returned 429 (attempt %s/%s). Retrying in %ss...", attempt + 1, max_retries, retry_delay)
+                time.sleep(retry_delay)
+                retry_delay *= 2
+                continue
+            try:
+                err_body = err.read().decode("utf-8")
+                err_data = json.loads(err_body)
+                msg = err_data.get("message", err_body)
+                code = err_data.get("code", "")
+                more_info = err_data.get("more_info", "")
+                raise RuntimeError(f"Twilio Error {code}: {msg} {more_info}".strip())
+            except Exception:
+                raise RuntimeError(f"Twilio API returned HTTP {err.code}: {err.reason}")
 
 
 def verify_twilio_signature(url: str, form: dict, signature: str) -> bool:
