@@ -14,7 +14,7 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
   const [accessToken, setAccessToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sandboxKeyword, setSandboxKeyword] = useState("double-john");
+  const [sandboxKeyword, setSandboxKeyword] = useState("hall-voice");
   const [twilioFrom, setTwilioFrom] = useState("14155238886");
 
   useEffect(() => {
