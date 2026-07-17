@@ -13,22 +13,28 @@ def parse(user_message: str) -> dict:
     
     # Prompt ko strictly JSON output dene ke liye train kiya gaya hai
     system_prompt = """You are the NLU (Natural Language Understanding) brain for a WhatsApp shopping bot.
-    Your ONLY job is to analyze the user's message and return a JSON object with exactly two keys: 'intent' and 'lang'.
-    
-    Rules for 'intent':
-    1. GREETING: Greetings, hellos, namaste.
-    2. QUERY: Asking for EXACT, SPECIFIC items or their prices (e.g., "I want Tata salt", "do you have Parle G", "price of blue jeans"). DO NOT use this if the user asks for a general category.
-    3. ORDER: Confirming a purchase, saying 'reserve it', 'done', 'book it', 'order karni hai'.
-    4. COMPLAINT: Asking for refunds, reporting defective items.
-    5. UNKNOWN: Asking for general categories, full menus, or options (e.g., "I want to buy grocery items", "show me clothes", "what do you sell?", "kya bechte ho"), or unrelated text.
+Your ONLY job is to analyze the user's message and return a JSON object with exactly three keys: 'intent', 'lang', and 'entities'.
 
-    Rules for 'lang':
-    - "en": If the user is typing in pure English.
-    - "hi": If the user is typing in Hindi, Hinglish, or Marathi.
-    
-    CRITICAL RULE: Respond ONLY with a valid JSON object. No markdown formatting, no conversational text.
-    Example valid output: {"intent": "UNKNOWN", "lang": "en"}"""
+Rules for 'intent':
+1. GREETING: Greetings, hellos.
+2. QUERY: Asking for EXACT items or prices.
+3. ORDER: If the user says 'reserve', 'yes', 'do it', or 'ok', classify the intent as CONFIRM. Do NOT extract these words as a 'product' entity..
+4. UNKNOWN: Asking for general categories or unrelated text.
+Rules:
+1. If the user asks for an item (e.g., "I want amul butter"), Intent is SEARCH_PRODUCT and Entity is {"product": "amul butter"}.
+2. If the user is responding to a confirmation like "Shall I reserve it?" with words like "Yes", "Reserve it", "Ok", or "Do it", the Intent MUST be CONFIRM_ORDER. Do NOT extract any product entities.
+3. If the user says "No", Intent is CANCEL_ORDER.
+Rules for 'lang':
+- "en": Pure English.
+- "hi": Hindi, Hinglish, or Marathi.
 
+CRITICAL RULES FOR 'entities':
+- If intent is QUERY, you MUST extract the core product name and put it in a 'product' key.
+- REMOVE extra words like "I want to buy", "show me", "price of".
+- Example User Input: "I want to buy amul butter"
+- Example Output: {"intent": "QUERY", "lang": "en", "entities": {"product": "amul butter"}}
+
+Respond ONLY with a valid, parsable JSON object. Do not include markdown blocks like ```json ."""
     try:
         chat_completion = client.chat.completions.create(
             messages=[
@@ -48,11 +54,16 @@ def parse(user_message: str) -> dict:
         lang = parsed_data.get("lang", "en").lower()
         
         # Ek chota sa safety net
+       # ... upar ka code same rahega ...
+        
         valid_intents = ["GREETING", "QUERY", "ORDER", "COMPLAINT", "UNKNOWN"]
         if intent not in valid_intents:
             intent = "UNKNOWN"
             
-        return {"intent": intent, "lang": lang}
+        # 🔥 FIX: Yahan 'entities' ko dictionary mein shamil kar le
+        entities = parsed_data.get("entities", {})
+            
+        return {"intent": intent, "lang": lang, "entities": entities}
         
     except Exception as e:
         print(f"\n🔥🔥 Groq NLU Error: {e} 🔥🔥\n")

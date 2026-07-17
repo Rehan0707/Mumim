@@ -74,7 +74,7 @@ def handle_message(
         intent=parsed_data.get("intent", "UNKNOWN"),
         lang=parsed_data.get("lang", "en"),
         raw=text,
-        entities=parsed_data.get("entities", {})
+        entities=parsed_data.get("entities", {})    
     )
     lang = result.lang
 
@@ -99,6 +99,27 @@ def _dispatch(db, business, customer, result, events, cards) -> str:
     intent, lang, entities = result.intent, result.lang, result.entities
     key = _key(business.id, customer.whatsapp_no)
 
+    # 🔥 1. STATE INTERCEPTOR (Production Level)
+    # Agar pending order hai, toh LLM intent ko override karo!
+    pending = _PENDING.get(key)
+    if pending:
+        user_text_lower = result.raw.lower().strip()
+        user_words = set(user_text_lower.split())
+        
+        confirm_words = {"yes", "haan", "haa", "ha", "ok", "okay", "confirm", "karun", "karu", "reserve", "kar do", "reserve it", "y"}
+        cancel_words = {"no", "nahi", "cancel", "n", "mat karo"}
+        
+        is_confirm = bool(user_words & confirm_words) or user_text_lower in confirm_words
+        is_cancel = bool(user_words & cancel_words) or user_text_lower in cancel_words
+
+        if is_confirm:
+            result.intent = "ORDER"  # Logging ke liye intent fix kar diya
+            return _place(db, business, customer, pending, lang, events, key)
+        elif is_cancel:
+            _PENDING.pop(key, None)
+            return "Koi baat nahi, order cancel kar diya gaya hai. Aur kuch chahiye?"
+
+    # 🔥 2. NORMAL INTENT ROUTING (Agar pending order nahi hai)
     if intent == "GREETING":
         return reply.greeting(lang)
 
@@ -109,7 +130,7 @@ def _dispatch(db, business, customer, result, events, cards) -> str:
 
     if intent == "COMPLAINT" or intent == "UNKNOWN":
         _PENDING.pop(key, None)
-        # Database se ACTIVE products uthao (taaki out-of-stock ya hidden items na dikhe)
+        # Database se ACTIVE products uthao
         available_products = db.query(Product).filter(
             Product.business_id == business.id,
             Product.is_active == True
@@ -118,19 +139,15 @@ def _dispatch(db, business, customer, result, events, cards) -> str:
         if available_products:
             details = []
             for p in available_products:
-                # Agar category ya brand None hai toh usko handle karo
                 cat = p.category or "General"
                 brand = f" ({p.brand})" if p.brand else ""
                 stock = f"In Stock ({p.stock_qty})" if p.stock_qty > 0 else "Out of Stock"
                 
-                # Attributes (jaise size/color) ko extract karke string banao
                 attrs = ""
                 if p.attributes:
-                    # Example: {'size': 'M, L', 'color': 'White'} -> "size: M, L, color: White"
                     attr_list = [f"{k}: {v}" for k, v in p.attributes.items()]
                     attrs = f" | Details: {', '.join(attr_list)}"
 
-                # Final line jo LLM padhega
                 details.append(f"- {p.name}{brand} | Category: {cat} | Price: ₹{p.price} | {stock}{attrs}")
             
             inventory_context = "\n".join(details)
@@ -140,20 +157,20 @@ def _dispatch(db, business, customer, result, events, cards) -> str:
         return reply.fallback(lang, user_message=result.raw, inventory_context=inventory_context)
      
     if intent == "ORDER":
-        # Confirmation of a pending reserve? -> place the order.
-        pending = _PENDING.get(key)
-        confirm_words = {"yes", "haan", "haa", "ok", "okay", "confirm", "karun", "karu", "reserve", "kar do", "reserve it"}
-        is_confirm = bool(set(result.raw.lower().split()) & confirm_words)
-        if pending and (is_confirm or not entities.get("keywords")):
-            return _place(db, business, customer, pending, lang, events, key)
-        # ORDER intent but new product mentioned -> search then ask to confirm.
+        # Direct order bina search kiye (e.g., "Order 5 amul butter direct")
+        if isinstance(entities, dict) and entities.get("product"):
+            result.raw = entities.get("product")
         return _query_and_stage(db, business, customer, result, lang, events, key, cards)
 
     # QUERY (default): search and stage a reserve.
+    if isinstance(entities, dict) and entities.get("product"):
+        result.raw = entities.get("product") 
+        
     return _query_and_stage(db, business, customer, result, lang, events, key, cards)
 
 
 def _query_and_stage(db, business, customer, result, lang, events, key, cards) -> str:
+    print(f"\n🚨 [LLAMA-3 EXTRACTED]: '{result.raw}' | ENTITIES: {result.entities}\n")
     matches = search.semantic_search(db, business.id, result.raw, result.entities, limit=3)
     if not matches:
         _PENDING.pop(key, None)
