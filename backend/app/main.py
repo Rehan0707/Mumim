@@ -103,12 +103,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# 👈 YAHAN STATIC FILES MOUNT KIYA HAI
-try:
-    os.makedirs("static", exist_ok=True)
-except OSError:
-    pass
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
 
 
 # Order matters: request-context (outermost) wraps CORS wraps the app.

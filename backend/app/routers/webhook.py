@@ -76,11 +76,7 @@ async def _run(db: Session, business: Business, msg: InboundMessage, base_url: s
     if msg.type == "voice" and reply_text:
         # Create a unique file name
         filename = f"reply_{uuid.uuid4().hex}.mp3"
-        filepath = os.path.join("static", filename)
-        try:
-            os.makedirs("static", exist_ok=True)
-        except OSError:
-            pass
+        filepath = os.path.join(settings.STATIC_DIR, filename)
         
         # Determine language (default to 'hi')
         bot_lang = out.get("lang", "hi")
