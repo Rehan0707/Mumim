@@ -41,8 +41,17 @@ def _resolve_db_url(url: str) -> str:
         url = "postgresql+psycopg://" + url[len("postgres://"):]
     elif url.startswith("postgresql://"):
         url = "postgresql+psycopg://" + url[len("postgresql://"):]
-        
     return url
+        
+def _resolve_static_dir() -> str:
+    path = "./static"
+    try:
+        os.makedirs(path, exist_ok=True)
+        return path
+    except OSError:
+        tmp_path = "/tmp/static"
+        os.makedirs(tmp_path, exist_ok=True)
+        return tmp_path
 
 
 class Settings:
@@ -53,6 +62,7 @@ class Settings:
     PUBLIC_BASE_URL: str = os.environ.get("PUBLIC_BASE_URL", "")
     APP_SECRET: str = os.environ.get("APP_SECRET", "")
     TOKEN_TTL_SECONDS: int = int(os.environ.get("TOKEN_TTL_SECONDS", str(7 * 24 * 60 * 60)))
+    STATIC_DIR: str = _resolve_static_dir()
 
     # --- data / ML ---
     DATABASE_URL: str = _resolve_db_url(os.environ.get("DATABASE_URL", "sqlite:///./munim.db"))

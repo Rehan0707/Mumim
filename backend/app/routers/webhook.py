@@ -76,8 +76,7 @@ async def _run(db: Session, business: Business, msg: InboundMessage, base_url: s
     if msg.type == "voice" and reply_text:
         # Create a unique file name
         filename = f"reply_{uuid.uuid4().hex}.mp3"
-        filepath = os.path.join("static", filename)
-        os.makedirs("static", exist_ok=True)
+        filepath = os.path.join(settings.STATIC_DIR, filename)
         
         # Determine language (default to 'hi')
         bot_lang = out.get("lang", "hi")
@@ -88,11 +87,10 @@ async def _run(db: Session, business: Business, msg: InboundMessage, base_url: s
         def generate_tts():
             try:
                 from gtts import gTTS
-            except ImportError:
-                print("⚠️ gTTS not installed. Skipping voice reply generation.")
-                return
-            tts = gTTS(text=reply_text, lang=bot_lang, slow=False)
-            tts.save(filepath)
+                tts = gTTS(text=reply_text, lang=bot_lang, slow=False)
+                tts.save(filepath)
+            except Exception as e:
+                print(f"⚠️ Voice reply generation failed: {e}")
             
         await asyncio.to_thread(generate_tts)
         
@@ -134,7 +132,17 @@ async def inbound(request: Request, db: Session = Depends(get_db)):
         if settings.WHATSAPP_MODE == "twilio" and settings.is_production:
             form_dict = {k: str(v) for k, v in form.items()}
             base_url_setting = settings.PUBLIC_BASE_URL.rstrip("/") if settings.PUBLIC_BASE_URL else ""
-            signed_url = f"{base_url_setting}{request.url.path}" if base_url_setting else str(request.url)
+            if base_url_setting:
+                signed_url = f"{base_url_setting}{request.url.path}"
+            else:
+                # Dynamically reconstruct the public URL from headers (handles proxying/Vercel/ngrok)
+                host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+                proto = request.headers.get("x-forwarded-proto") or "https"
+                if host:
+                    signed_url = f"{proto}://{host}{request.url.path}"
+                else:
+                    signed_url = str(request.url).replace("http://", "https://")
+            
             signature = request.headers.get("X-Twilio-Signature", "")
             if not whatsapp.verify_twilio_signature(signed_url, form_dict, signature):
                 raise HTTPException(401, "invalid Twilio webhook signature")

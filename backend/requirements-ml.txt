@@ -11,3 +11,4 @@ sentence-transformers>=2.2.0
 sentencepiece>=0.1.99
 protobuf>=4.25.0
 easyocr>=1.7.0
+lightgbm>=4.0.0
