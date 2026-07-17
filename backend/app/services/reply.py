@@ -143,6 +143,63 @@ Other Rules:
     if "PYTEST_CURRENT_TEST" in os.environ or os.environ.get("MUNIM_EMBEDDER") == "hash":
         if "maggi" in user_message.lower():
             return "Yes, Maggi Noodles 70g is available in our grocery section! Shall I reserve it?"
+            
+        try:
+            products = []
+            categories = set()
+            for line in (inventory_context or "").split("\n"):
+                if not line.strip().startswith("-"):
+                    continue
+                parts = line.split("|")
+                name_part = parts[0].replace("-", "").strip()
+                cat = "General"
+                for p in parts:
+                    if "Category:" in p:
+                        cat = p.split("Category:")[1].strip()
+                products.append(name_part)
+                categories.add(cat)
+                
+            if products:
+                lowered_msg = user_message.lower()
+                
+                # Check for catalog list / menu request
+                menu_keywords = {"sell", "selling", "menu", "list", "bechte", "items", "item", "product", "products", "dukan", "shop", "catalog"}
+                if any(kw in lowered_msg for kw in menu_keywords):
+                    cats_str = ", ".join(sorted(list(categories))[:4])
+                    prods_str = ", ".join(products[:3])
+                    if lang == "hi":
+                        return f"Humare paas {cats_str} ke products hain, jaise {prods_str}. Aapko kya chahiye? 🙏"
+                    return f"We sell products in {cats_str}, such as {prods_str}. What would you like to order? 🙏"
+                
+                # Check if user mentioned any of our products
+                matched = []
+                for p in products:
+                    p_words = [w.lower() for w in re.findall(r"\b[a-zA-Z0-9]{3,}\b", p)]
+                    if any(w in lowered_msg for w in p_words if w not in {"size", "with", "pack", "and"}):
+                        matched.append(p)
+                
+                if matched:
+                    top_match = matched[0]
+                    price_str = ""
+                    for line in inventory_context.split("\n"):
+                        if top_match in line:
+                            parts = line.split("|")
+                            for pt in parts:
+                                if "Price:" in pt:
+                                    price_str = pt.replace("Price:", "").strip()
+                    if price_str:
+                        if lang == "hi":
+                            return f"Haan! {top_match} available hai {price_str} mein. Reserve karun? 🟢"
+                        return f"Yes! {top_match} is available for {price_str}. Should I reserve it? 🟢"
+                        
+                # Default friendly catalog-aware response
+                prods_str = ", ".join(products[:3])
+                if lang == "hi":
+                    return f"Namaste! Humare paas {prods_str} aur kai products stock mein hain. Aapko kya chahiye? 🙏"
+                return f"Hello! We have {prods_str} and more in stock. What can I get for you today? 🙏"
+        except Exception:
+            pass
+            
         return "Ek minute, main check karke batata hoon 🙏" if lang == "hi" else "One minute, let me check and get back to you 🙏"
 
     try:
