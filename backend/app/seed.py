@@ -127,59 +127,65 @@ def run() -> None:
     db = SessionLocal()
     random.seed(42)
     try:
-        biz = Business(
+        biz1 = Business(
             name="Ramesh Vastralaya & General Store", whatsapp_no="+919800000000",
             category="clothing", lang_default="hi", upi_id="ramesh@okhdfcbank",
         )
-        db.add(biz)
+        biz2 = Business(
+            name="Ramesh Vastralaya & General Store", whatsapp_no="+919890786572",
+            category="clothing", lang_default="hi", upi_id="ramesh@okhdfcbank",
+        )
+        db.add(biz1)
+        db.add(biz2)
         db.flush()
 
-        products = []
-        for name, brand, cat, attrs, price, stock, photo in CATALOG:
-            text = embeddings.product_text(name, brand, attrs)
-            p = Product(
-                business_id=biz.id, name=name, brand=brand, category=cat, attributes=attrs,
-                price=price, stock_qty=stock, image_url=f"{IMG}{photo}?w=400",
-                text_embedding=embeddings.embed_text(text),
-            )
-            db.add(p)
-            products.append(p)
-        db.flush()
-
-        customers = []
-        for no, name in CUSTOMERS:
-            c = crm.upsert_customer(db, biz.id, no, name)
-            customers.append(c)
-        db.flush()
-
-        # past PAID orders across the last 10 days -> lively CRM + analytics
-        now = datetime.now(timezone.utc)
-        for i in range(100):
-            cust = random.choice(customers)
-            prod = random.choice(products)
-            qty = random.randint(1, 3)
-            when = now - timedelta(days=random.randint(1, 10), hours=random.randint(0, 20))
-            order = Order(business_id=biz.id, customer_id=cust.id, status="paid",
-                          total=float(prod.price) * qty, created_at=when, paid_at=when,
-                          payment_ref=f"seed_{i}")
-            db.add(order)
+        for biz in (biz1, biz2):
+            products = []
+            for name, brand, cat, attrs, price, stock, photo in CATALOG:
+                text = embeddings.product_text(name, brand, attrs)
+                p = Product(
+                    business_id=biz.id, name=name, brand=brand, category=cat, attributes=attrs,
+                    price=price, stock_qty=stock, image_url=f"{IMG}{photo}?w=400",
+                    text_embedding=embeddings.embed_text(text),
+                )
+                db.add(p)
+                products.append(p)
             db.flush()
-            db.add(OrderItem(order_id=order.id, product_id=prod.id, qty=qty, unit_price=float(prod.price)))
-            cust.total_spend = float(cust.total_spend or 0) + float(prod.price) * qty
-            cust.order_count = (cust.order_count or 0) + 1
-            if cust.last_order is None or when > cust.last_order:
-                cust.last_order = when
-            db.add(Message(business_id=biz.id, customer_id=cust.id, direction="in",
-                           input_type="text", text=f"{prod.name} chahiye", intent="ORDER",
-                           lang="hi", created_at=when))
 
-        for cust in customers:
-            crm.recompute_segment(cust)
+            customers = []
+            for no, name in CUSTOMERS:
+                c = crm.upsert_customer(db, biz.id, no, name)
+                customers.append(c)
+            db.flush()
+
+            # past PAID orders across the last 10 days -> lively CRM + analytics
+            now = datetime.now(timezone.utc)
+            for i in range(100):
+                cust = random.choice(customers)
+                prod = random.choice(products)
+                qty = random.randint(1, 3)
+                when = now - timedelta(days=random.randint(1, 10), hours=random.randint(0, 20))
+                order = Order(business_id=biz.id, customer_id=cust.id, status="paid",
+                              total=float(prod.price) * qty, created_at=when, paid_at=when,
+                              payment_ref=f"seed_{i}")
+                db.add(order)
+                db.flush()
+                db.add(OrderItem(order_id=order.id, product_id=prod.id, qty=qty, unit_price=float(prod.price)))
+                cust.total_spend = float(cust.total_spend or 0) + float(prod.price) * qty
+                cust.order_count = (cust.order_count or 0) + 1
+                if cust.last_order is None or when > cust.last_order:
+                    cust.last_order = when
+                db.add(Message(business_id=biz.id, customer_id=cust.id, direction="in",
+                               input_type="text", text=f"{prod.name} chahiye", intent="ORDER",
+                               lang="hi", created_at=when))
+
+            for cust in customers:
+                crm.recompute_segment(cust)
 
         db.commit()
-        print(f"✅ Seeded business_id = {biz.id}")
-        print(f"   {len(products)} products, {len(customers)} customers, 100 past orders")
-        print(f"   Demo WhatsApp shop no: {biz.whatsapp_no}")
+        print(f"✅ Seeded business_id = {biz1.id} & {biz2.id}")
+        print(f"   {len(CATALOG)} products, {len(CUSTOMERS)} customers, 100 past orders per store")
+        print(f"   Demo WhatsApp shop no: {biz1.whatsapp_no} & {biz2.whatsapp_no}")
     finally:
         db.close()
 
