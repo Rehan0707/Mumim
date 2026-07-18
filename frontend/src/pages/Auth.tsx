@@ -14,8 +14,9 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
   const [accessToken, setAccessToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sandboxKeyword, setSandboxKeyword] = useState("hall-voice");
+  const [sandboxKeyword, setSandboxKeyword] = useState("influence-down");
   const [twilioFrom, setTwilioFrom] = useState("14155238886");
+  const [otpHint, setOtpHint] = useState<string | null>(null);
 
   useEffect(() => {
     api.health().then((h) => {
@@ -35,7 +36,14 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
     setError(null);
     try {
       const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
-      await api.sendOtp(formattedPhone);
+      const res = await api.sendOtp(formattedPhone);
+      if (res.debug_code) {
+        setOtpHint(`Debug OTP code: ${res.debug_code}`);
+      } else if (res.mode === "mock") {
+        setOtpHint("WhatsApp sandbox limit reached? Try verification code 123456.");
+      } else {
+        setOtpHint(null);
+      }
       setStep("verify");
     } catch (err: any) {
       setError(err.message || "Failed to send verification code. Please check your connection.");
@@ -117,12 +125,12 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
                 </div>
                 <div className="w-full">
                   <label className="font-label-caps text-[10px] text-on-surface-variant uppercase text-left block mb-1">
-                    Sandbox Keyword (e.g. double-john)
+                    Sandbox Keyword (e.g. influence-down)
                   </label>
                   <Input
                     value={sandboxKeyword}
                     onChange={(e: any) => setSandboxKeyword(e.target.value.replace(/\s+/g, ""))}
-                    placeholder="double-john"
+                    placeholder="influence-down"
                     className="h-8 text-xs"
                     disabled={loading}
                   />
@@ -171,7 +179,11 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
                   className="text-center font-numeral-lg text-numeral-lg tracking-[0.5em]"
                   disabled={loading}
                 />
-
+                {otpHint && (
+                  <p className="font-body-sm text-body-sm text-primary text-center mt-1">
+                    💡 {otpHint}
+                  </p>
+                )}
               </div>
 
               {error && (
@@ -185,7 +197,7 @@ export function Auth({ onDone }: { onDone: (result: { phone: string; accessToken
               </Button>
 
               <button 
-                onClick={() => { setStep("login"); setOtp(""); setError(null); }} 
+                onClick={() => { setStep("login"); setOtp(""); setError(null); setOtpHint(null); }} 
                 className="font-body-sm text-body-sm text-primary underline"
                 disabled={loading}
               >

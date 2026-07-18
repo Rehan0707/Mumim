@@ -224,13 +224,13 @@ export default function Onboarding({ phone, onComplete, onBack }: OnboardingProp
             </p>
             <div className="w-36 h-36 bg-white border border-outline-variant rounded-lg p-2 flex items-center justify-center">
               <img
-                src={`https://quickchart.io/qr?size=140&text=${encodeURIComponent("https://wa.me/14155238886?text=join%20double-john")}`}
+                src={`https://quickchart.io/qr?size=140&text=${encodeURIComponent("https://wa.me/14155238886?text=join%20influence-down")}`}
                 alt="Twilio Sandbox QR Code"
                 className="w-full h-full object-contain"
               />
             </div>
             <p className="font-mono text-xs text-brand-700 bg-brand-50 border border-brand-100 rounded-lg px-3 py-1 font-semibold text-center">
-              join double-john
+              join influence-down
             </p>
           </div>
         )}
